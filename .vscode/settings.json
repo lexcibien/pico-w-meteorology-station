@@ -1,9 +1,15 @@
 {
   "cSpell.words": [
     "arduino",
+    "bssid",
+    "BSSID",
     "buildcache",
     "earlephilhower",
+    "Philhower",
     "rpipicow",
+    "RSSI",
+    "TKIP",
+    "UNKN",
     "wifi"
   ],
   "sonarlint.pathToCompileCommands": "${workspaceFolder}\\compile_commands.json"
