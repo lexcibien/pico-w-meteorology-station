@@ -6,7 +6,7 @@ void getNetworkList();
 void connectToInternet();
 
 String ssid = "Apartamento 502";
-String password = "";
+String password = "cobalto01";
 int status = WL_IDLE_STATUS;
 
 void setup() {
@@ -16,7 +16,7 @@ void setup() {
 }
 
 void loop() {
-  if(WiFi.status() == WL_CONNECTED) {
+  if (WiFi.status() == WL_CONNECTED) {
     Serial.println("Você está conectado!");
     delay(1000);
   }
@@ -26,44 +26,52 @@ void getNetworkList() {
   delay(2000);
   Serial.printf("Iniciando o escaneamento em %lu\n", millis());
   auto cnt = WiFi.scanNetworks();
-  if (!cnt) {
+  while (!cnt) {
     Serial.printf("Nenhuma rede encontrada\n");
-  } else {
-    Serial.printf("Encontrado %d redes\n\n", cnt);
-    Serial.printf("%32s %5s %17s %2s %4s\n", "SSID", "ENC", "BSSID        ", "CH", "RSSI");
-    for (auto i = 0; i < cnt; i++) {
-      uint8_t bssid[6];
-      WiFi.BSSID(i, bssid);
-      Serial.printf("%32s %5s %17s %2d %4ld\n", WiFi.SSID(i), encToString(WiFi.encryptionType(i)), macToString(bssid), WiFi.channel(i), WiFi.RSSI(i));
-    }
   }
+
+  Serial.printf("Encontrado %d redes\n\n", cnt);
+  Serial.printf("%32s %5s %17s %2s %4s\n", "SSID", "ENC", "BSSID        ", "CH", "RSSI");
+  for (auto i = 0; i < cnt; i++) {
+    uint8_t bssid[6];
+    WiFi.BSSID(i, bssid);
+    Serial.printf("%32s %5s %17s %2d %4ld\n", WiFi.SSID(i), encToString(WiFi.encryptionType(i)), macToString(bssid), WiFi.channel(i), WiFi.RSSI(i));
+  }
+
   delay(2000);
 }
 
 void connectToInternet() {
   getNetworkList();
+
   Serial.print("Escreva o nome da internet para conectar:");
   while (Serial.available() == 0) {
   }
-  ssid = Serial.readStringUntil('\n');
+  String inputSSID = Serial.readStringUntil('\n');
+  if (inputSSID == "") {
+    Serial.println("SSID não foi digitada, usando da programação");
+  }
+
   Serial.print("Agora a senha da internet:");
   while (Serial.available() == 0) {
-
   }
-  password = Serial.readStringUntil('\n');
+  String inputPASSWORD = Serial.readStringUntil('\n');
+  if (inputPASSWORD == "") {
+    Serial.println("Senha não foi digitada, usando da programação");
+  }
 
   Serial.printf("O nome do wifi é %s e sua senha do wifi é %s.\n", ssid.c_str(), password.c_str());
 
   Serial.print("Conectando");
   WiFi.begin(ssid.c_str(), password.c_str());
 
-  while (WiFi.status() != WL_CONNECTED)
-  {
+  while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+
     if (WiFi.status() == WL_CONNECT_FAILED) {
       Serial.print("A conexão falhou tente mais tarde");
-      break;
+      return;
     }
   }
   Serial.println();
