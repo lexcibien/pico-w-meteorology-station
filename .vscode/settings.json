@@ -4,12 +4,16 @@
     "bssid",
     "BSSID",
     "buildcache",
+    "clangtidy",
+    "cppcheck",
     "earlephilhower",
     "Philhower",
     "rpipicow",
     "RSSI",
     "TKIP",
+    "unflags",
     "UNKN",
+    "Werror",
     "wifi"
   ],
   "sonarlint.pathToCompileCommands": "${workspaceFolder}\\compile_commands.json"

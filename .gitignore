@@ -1,8 +1,11 @@
+# Generated files
+compile_commands.json
 .pio
-.vscode/.browse.c_cpp.db*
+.vscode/ipch
 .vscode/c_cpp_properties.json
 .vscode/launch.json
-.vscode/ipch
+.vscode/.browse.c_cpp.db*
+
 # Prerequisites
 *.d
 
@@ -26,6 +29,8 @@
 *.so
 *.dylib
 *.dll
+*.so.*
+
 
 # Fortran module files
 *.mod
@@ -42,5 +47,31 @@
 *.out
 *.app
 
+# Build directories
+build/
+Build/
+build-*/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+install_manifest.txt
+compile_commands.json
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+*.swp
+
+# vcpkg
+vcpkg_installed/
+
 # debug information files
 *.dwo
+
+# test output & cache
+Testing/
+.cache/
