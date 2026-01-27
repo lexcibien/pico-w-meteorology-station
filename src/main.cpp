@@ -1,24 +1,55 @@
 #include <WiFi.h>
+#include <DHT.h>
+#include <DHT_U.h>
+
+// Pinos módulos
+
+#define PIN_DHT11_DATA 2
+
+#define PIN_RTC_DAT 4
+#define PIN_RTC_CLK 5
+#define PIN_RTC_RST 6
+
+#define PIN_R_LED 18
+#define PIN_G_LED 19
+#define PIN_B_LED 20
+
+#define PIN_LDR 26
 
 const char* macToString(const uint8_t mac[6]);
 const char* encToString(uint8_t enc);
 void getNetworkList();
 void connectToInternet();
+void readIncidentLight();
+void readTemperatureAndHumidity();
 
 const String ssid = "Apartamento 502";
 const String password = "cobalto01";
 
+DHT_Unified dht(PIN_DHT11_DATA, DHT11);
+
+uint32_t delayMS;
+
 void setup() {
   Serial.begin(115200);
   delay(10000);
-  connectToInternet();
+  // connectToInternet();
+  sensor_t sensor;
+  dht.temperature().getSensor(&sensor);
+  delayMS = sensor.min_delay / 1000;
 }
 
 void loop() {
+  static uint32_t lastTime = 0;
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("Você está conectado!");
-    delay(1000);
   }
+  if (millis() - lastTime >= delayMS) {
+    readTemperatureAndHumidity();
+    lastTime = millis();
+  }
+  readIncidentLight();
+  delay(1000);
 }
 
 void getNetworkList() {
@@ -72,6 +103,30 @@ void connectToInternet() {
   Serial.println();
 
   Serial.printf("Conectado, IP address: %s\n", WiFi.localIP().toString().c_str());
+}
+
+void readTemperatureAndHumidity() {
+  sensors_event_t event;
+  dht.temperature().getEvent(&event);
+  if (isnan(event.temperature)) {
+    Serial.println(F("Error reading temperature!"));
+  } else {
+    Serial.printf("Temperature: %f °C", event.temperature);
+  }
+
+  dht.humidity().getEvent(&event);
+  if (isnan(event.relative_humidity)) {
+    Serial.println(F("Error reading humidity!"));
+  }
+  else {
+    Serial.printf("Humidity: %f \\%", event.relative_humidity);
+  }
+}
+
+void readIncidentLight() {
+  auto adcRead = static_cast<uint16_t>(analogRead(PIN_LDR));
+  auto lux = static_cast<uint8_t>(map(adcRead, 100, 1023, 0, 10));
+  Serial.printf("A quantidade de luz no ambiente é: %c lm\n", lux);
 }
 
 const char* macToString(const uint8_t mac[6]) {
