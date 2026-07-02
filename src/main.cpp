@@ -1,7 +1,7 @@
-#include <WiFi.h>
 #include <DHT.h>
 #include <DHT_U.h>
 #include <RtcDS1302.h>
+#include <WiFi.h>
 
 // Pinos módulos
 
@@ -156,15 +156,8 @@ void connectToInternet() {
 void printDateTime(const RtcDateTime& dt) {
   char datestring[26];
 
-  snprintf_P(datestring,
-    countof(datestring),
-    PSTR("%02u/%02u/%04u %02u:%02u:%02u"),
-    dt.Month(),
-    dt.Day(),
-    dt.Year(),
-    dt.Hour(),
-    dt.Minute(),
-    dt.Second());
+  snprintf_P(datestring, countof(datestring), PSTR("%02u/%02u/%04u %02u:%02u:%02u"), dt.Month(), dt.Day(), dt.Year(), dt.Hour(), dt.Minute(),
+             dt.Second());
   Serial.print(datestring);
 }
 
@@ -216,6 +209,6 @@ const char* encToString(uint8_t enc) {
     case ENC_TYPE_TKIP: return "WPA";
     case ENC_TYPE_CCMP: return "WPA2";
     case ENC_TYPE_AUTO: return "AUTO";
-    default: return "UNKN";
+    default:            return "UNKN";
   }
 }
