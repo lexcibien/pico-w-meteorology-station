@@ -1,0 +1,20 @@
+---
+Checks:
+  "*,
+  -llvmlibc-*,
+  -misc-use-internal-linkage,
+  -readability-magic-numbers,
+  -altera-unroll-loops,
+  -readability-implicit-bool-conversion,
+  -modernize-use-trailing-return-type"
+
+CheckOptions:
+  - key: readability-function-cognitive-complexity.Threshold
+    value: 45
+
+  - key: misc-non-private-member-variables-in-classes.IgnorePublicMemberVariables
+    value: true
+
+  - key: cppcoreguidelines-avoid-non-const-global-variables.AllowInternalLinkage
+    value: true
+...

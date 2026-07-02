@@ -8,6 +8,7 @@
     "clangtidy",
     "cppcheck",
     "earlephilhower",
+    "fstack",
     "makuna",
     "Philhower",
     "rpipicow",
@@ -18,5 +19,13 @@
     "Werror",
     "wifi"
   ],
-  "sonarlint.pathToCompileCommands": "${workspaceFolder}\\compile_commands.json"
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "always"
+  },
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "clangd.enable": true,
+  "sonarlint.pathToCompileCommands": "${workspaceFolder}/compile_commands.json",
+  "clangd.arguments": [
+    "--query-driver=**/arm-none-eabi-*"
+  ]
 }
