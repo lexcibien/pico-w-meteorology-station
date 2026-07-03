@@ -1,7 +1,9 @@
+#include "Arduino.h"
 #include <DHT.h>
 #include <DHT_U.h>
 #include <RtcDS1302.h>
 #include <WiFi.h>
+#include <cstdint>
 
 // Pinos módulos
 
@@ -17,8 +19,10 @@
 
 #define PIN_LDR 26
 
-const String ssid = "Apartamento 502";
-const String password = "cobalto01";
+const String ssid = "YOUR_SSID";
+const String password = "";
+
+const uint16_t ANALOG_RES = 1U << 10U;
 
 DHT_Unified dht(PIN_DHT11_DATA, DHT11);
 
@@ -31,7 +35,7 @@ void getNetworkList();
 void connectToInternet();
 void readIncidentLight();
 void readTemperatureAndHumidity();
-void printDateTime(const RtcDateTime& dt);
+void printDateTime(const RtcDateTime& dateTime);
 void performPrintDateTime();
 
 uint32_t delayMS;
@@ -39,7 +43,6 @@ uint32_t delayMS;
 void setup() {
   Serial.begin(115200);
   delay(10000);
-  // connectToInternet();
   sensor_t sensor;
   dht.temperature().getSensor(&sensor);
   delayMS = sensor.min_delay / 1000;
@@ -153,11 +156,11 @@ void connectToInternet() {
 
 #define countof(a) (sizeof(a) / sizeof(a[0]))
 
-void printDateTime(const RtcDateTime& dt) {
+void printDateTime(const RtcDateTime& dateTime) {
   char datestring[26];
 
-  snprintf_P(datestring, countof(datestring), PSTR("%02u/%02u/%04u %02u:%02u:%02u"), dt.Month(), dt.Day(), dt.Year(), dt.Hour(), dt.Minute(),
-             dt.Second());
+  snprintf_P(datestring, countof(datestring), PSTR("%02u/%02u/%04u %02u:%02u:%02u"), dateTime.Month(), dateTime.Day(), dateTime.Year(),
+             dateTime.Hour(), dateTime.Minute(), dateTime.Second());
   Serial.print(datestring);
 }
 
@@ -192,14 +195,17 @@ void readTemperatureAndHumidity() {
 }
 
 void readIncidentLight() {
+  const uint8_t OFFSET_VAL = 100;
+  const uint8_t MAX_PERCENT = 100;
+
   auto adcRead = static_cast<uint16_t>(analogRead(PIN_LDR));
-  unsigned long lux = map(adcRead, 100, 1023, 0, 100);
+  uint32_t lux = map(adcRead, OFFSET_VAL, ANALOG_RES - 1, 0, MAX_PERCENT);
   Serial.printf("A quantidade de luz no ambiente é: %lu lm\n", lux);
 }
 
 const char* macToString(const uint8_t mac[6]) {
-  static char s[20];
-  sprintf(s, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  static char s[31];
+  snprintf(s, sizeof(s), "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   return s;
 }
 

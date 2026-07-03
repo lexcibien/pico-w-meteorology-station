@@ -2,11 +2,15 @@
 Checks:
   "*,
   -llvmlibc-*,
-  -misc-use-internal-linkage,
-  -readability-magic-numbers,
-  -altera-unroll-loops,
-  -readability-implicit-bool-conversion,
+  -cppcoreguidelines-pro-type-vararg,
+  -hicpp-vararg,
+  -modernize-use-std-print,
   -modernize-use-trailing-return-type"
+  -misc-use-internal-linkage,
+  # -readability-magic-numbers,
+  # -altera-unroll-loops,
+  # -readability-implicit-bool-conversion,
+  # -modernize-use-trailing-return-type"
 
 CheckOptions:
   - key: readability-function-cognitive-complexity.Threshold
