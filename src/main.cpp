@@ -7,20 +7,20 @@
 
 // Pinos módulos
 
-#define PIN_DHT11_DATA 2
+constexpr uint8_t PIN_DHT11_DATA = 2;
 
-#define PIN_RTC_DAT 4
-#define PIN_RTC_CLK 5
-#define PIN_RTC_RST 6
+constexpr uint8_t PIN_RTC_DAT = 4;
+constexpr uint8_t PIN_RTC_CLK = 5;
+constexpr uint8_t PIN_RTC_RST = 6;
 
-#define PIN_R_LED 18
-#define PIN_G_LED 19
-#define PIN_B_LED 20
+constexpr uint8_t PIN_R_LED = 18;
+constexpr uint8_t PIN_G_LED = 19;
+constexpr uint8_t PIN_B_LED = 20;
 
-#define PIN_LDR 26
+constexpr uint8_t PIN_LDR = 26;
 
-const String ssid = "YOUR_SSID";
-const String password = "";
+constexpr const char* ssid = "YOUR_SSID";
+constexpr const char* password = "";
 
 const uint16_t ANALOG_RES = 1U << 10U;
 
@@ -124,21 +124,23 @@ void connectToInternet() {
   getNetworkList();
 
   Serial.print("Escreva o nome da internet para conectar:");
+  // NOLINTNEXTLINE (readability-braces-around-statements)
   while (Serial.available() == 0);
   if (String inputSSID = Serial.readStringUntil('\n'); inputSSID == "") {
     Serial.println("SSID não foi digitada, usando da programação");
   }
 
   Serial.print("Agora a senha da internet:");
+  // NOLINTNEXTLINE (readability-braces-around-statements)
   while (Serial.available() == 0);
   if (String inputPASSWORD = Serial.readStringUntil('\n'); inputPASSWORD == "") {
     Serial.println("Senha não foi digitada, usando da programação");
   }
 
-  Serial.printf("O nome do wifi é %s e sua senha do wifi é %s.\n", ssid.c_str(), password.c_str());
+  Serial.printf("O nome do wifi é %s e sua senha do wifi é %s.\n", ssid, password);
 
   Serial.print("Conectando");
-  WiFi.begin(ssid.c_str(), password.c_str());
+  WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -154,13 +156,11 @@ void connectToInternet() {
   Serial.printf("Conectado, IP address: %s\n", WiFi.localIP().toString().c_str());
 }
 
-#define countof(a) (sizeof(a) / sizeof(a[0]))
-
 void printDateTime(const RtcDateTime& dateTime) {
-  char datestring[26];
+  char datestring[31];
 
-  snprintf_P(datestring, countof(datestring), PSTR("%02u/%02u/%04u %02u:%02u:%02u"), dateTime.Month(), dateTime.Day(), dateTime.Year(),
-             dateTime.Hour(), dateTime.Minute(), dateTime.Second());
+  snprintf(datestring, std::size(datestring), "%02u/%02u/%04u %02u:%02u:%02u", dateTime.Month(), dateTime.Day(), dateTime.Year(), dateTime.Hour(),
+           dateTime.Minute(), dateTime.Second());
   Serial.print(datestring);
 }
 
@@ -181,14 +181,14 @@ void readTemperatureAndHumidity() {
   sensors_event_t event;
   dht.temperature().getEvent(&event);
   if (isnan(event.temperature)) {
-    Serial.println(F("Error reading temperature!"));
+    Serial.println("Error reading temperature!");
   } else {
     Serial.printf("Temperature: %.2f °C\n", event.temperature);
   }
 
   dht.humidity().getEvent(&event);
   if (isnan(event.relative_humidity)) {
-    Serial.println(F("Error reading humidity!"));
+    Serial.println("Error reading humidity!");
   } else {
     Serial.printf("Humidity: %.2f %%\n", event.relative_humidity);
   }
@@ -204,9 +204,9 @@ void readIncidentLight() {
 }
 
 const char* macToString(const uint8_t mac[6]) {
-  static char s[31];
-  snprintf(s, sizeof(s), "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  return s;
+  char buffer[31];
+  snprintf(buffer, std::size(buffer), "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  return buffer;
 }
 
 const char* encToString(uint8_t enc) {

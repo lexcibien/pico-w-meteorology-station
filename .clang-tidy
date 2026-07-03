@@ -5,12 +5,14 @@ Checks:
   -cppcoreguidelines-pro-type-vararg,
   -hicpp-vararg,
   -modernize-use-std-print,
-  -modernize-use-trailing-return-type"
+  -modernize-use-trailing-return-type,
   -misc-use-internal-linkage,
-  # -readability-magic-numbers,
-  # -altera-unroll-loops,
-  # -readability-implicit-bool-conversion,
-  # -modernize-use-trailing-return-type"
+  -altera-unroll-loops,
+  -cert-err33-c,
+  -fuchsia-default-arguments-calls,
+  -modernize-use-trailing-return-type,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -hicpp-no-array-decay"
 
 CheckOptions:
   - key: readability-function-cognitive-complexity.Threshold
