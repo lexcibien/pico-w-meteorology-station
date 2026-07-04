@@ -3,14 +3,13 @@
 #include <DHT_U.h>
 #include <RtcDS1302.h>
 #include <WiFi.h>
-#include <cstdint>
 
 // Pinos módulos
 
 constexpr uint8_t PIN_DHT11_DATA = 2;
 
-constexpr uint8_t PIN_RTC_DAT = 4;
-constexpr uint8_t PIN_RTC_CLK = 5;
+constexpr uint8_t PIN_RTC_DAT = SDA;
+constexpr uint8_t PIN_RTC_CLK = SCL;
 constexpr uint8_t PIN_RTC_RST = 6;
 
 constexpr uint8_t PIN_R_LED = 18;
