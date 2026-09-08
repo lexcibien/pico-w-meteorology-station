@@ -9,6 +9,7 @@
     "cppcheck",
     "earlephilhower",
     "fstack",
+    "gpio",
     "makuna",
     "NOLINTNEXTLINE",
     "Philhower",

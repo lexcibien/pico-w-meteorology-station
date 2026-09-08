@@ -1,15 +1,21 @@
-#include "Arduino.h"
 #include <DHT.h>
 #include <DHT_U.h>
-#include <RtcDS1302.h>
-#include <WiFi.h>
+#include <cstdio>
+#include <hardware/adc.h>
+#include <iterator>
+#include <lwip/ip4_addr.h>
+#include <lwip/netif.h>
+#include <pico/cyw43_arch.h>
+#include <pico/stdio.h>
+#include <pico/time.h>
+#include <src/RtcDS1302.h>
 
 // Pinos módulos
 
 constexpr uint8_t PIN_DHT11_DATA = 2;
 
-constexpr uint8_t PIN_RTC_DAT = SDA;
-constexpr uint8_t PIN_RTC_CLK = SCL;
+constexpr uint8_t PIN_RTC_DAT = PICO_DEFAULT_I2C_SDA_PIN;
+constexpr uint8_t PIN_RTC_CLK = PICO_DEFAULT_I2C_SCL_PIN;
 constexpr uint8_t PIN_RTC_RST = 6;
 
 constexpr uint8_t PIN_R_LED = 18;
@@ -21,138 +27,157 @@ constexpr uint8_t PIN_LDR = 26;
 constexpr const char* ssid = "YOUR_SSID";
 constexpr const char* password = "";
 
-const uint16_t ANALOG_RES = 1U << 10U;
+const uint16_t ANALOG_RES = 1U << 12U;
 
 DHT_Unified dht(PIN_DHT11_DATA, DHT11);
 
 ThreeWire myWire(PIN_RTC_DAT, PIN_RTC_CLK, PIN_RTC_RST); // IO, SCLK, CE
 RtcDS1302<ThreeWire> RTC(myWire);
 
-const char* macToString(const uint8_t mac[6]);
-const char* encToString(uint8_t enc);
 void getNetworkList();
 void connectToInternet();
 void readIncidentLight();
 void readTemperatureAndHumidity();
 void printDateTime(const RtcDateTime& dateTime);
 void performPrintDateTime();
+static void scan_worker_fn(async_context_t* context, async_at_time_worker_t* worker);
 
 uint32_t delayMS;
 
-void setup() {
-  Serial.begin(115200);
-  delay(10000);
+int main() {
+  stdio_init_all();
+  sleep_ms(10000);
+
+  if (cyw43_arch_init()) {
+    printf("failed to initialise\n");
+    return 1;
+  }
+
+  cyw43_arch_enable_sta_mode();
+
+  // Start a scan immediately
+  bool scan_started = false;
+  async_at_time_worker_t scan_worker = { .do_work = scan_worker_fn, .user_data = &scan_started };
+  hard_assert(async_context_add_at_time_worker_in_ms(cyw43_arch_async_context(), &scan_worker, 0));
+
+  adc_init();
+  adc_gpio_init(PIN_LDR);
+
   sensor_t sensor;
   dht.temperature().getSensor(&sensor);
   delayMS = sensor.min_delay / 1000;
 
-  Serial.printf("Data compilado: %s\n", __DATE__);
-  Serial.printf("Horário compilado: %s\n", __TIME__);
+  printf("Data compilado: %s\n", __DATE__);
+  printf("Horário compilado: %s\n", __TIME__);
 
   RTC.Begin();
 
   auto compiled = RtcDateTime(__DATE__, __TIME__);
   printDateTime(compiled);
-  Serial.println();
+  printf("\n");
 
   if (!RTC.IsDateTimeValid()) {
     // Common Causes:
     //    1) first time you ran and the device wasn't running yet
     //    2) the battery on the device is low or even missing
 
-    Serial.println("RTC lost confidence in the DateTime!");
+    printf("RTC lost confidence in the DateTime!\n");
     RTC.SetDateTime(compiled);
-    Serial.println("Set new DateTime");
+    printf("Set new DateTime\n");
   }
 
   if (RTC.GetIsWriteProtected()) {
-    Serial.println("RTC was write protected, enabling writing now");
+    printf("RTC was write protected, enabling writing now\n");
     RTC.SetIsWriteProtected(false);
   }
 
   if (!RTC.GetIsRunning()) {
-    Serial.println("RTC was not actively running, starting now");
+    printf("RTC was not actively running, starting now\n");
     RTC.SetIsRunning(true);
   }
 
   RtcDateTime now = RTC.GetDateTime();
   if (now < compiled) {
-    Serial.println("RTC is older than compile time!  (Updating DateTime)");
+    printf("RTC is older than compile time!  (Updating DateTime)\n");
     RTC.SetDateTime(compiled);
   } else if (now > compiled) {
-    Serial.println("RTC is newer than compile time. (this is expected)");
+    printf("RTC is newer than compile time. (this is expected)\n");
   } else if (now == compiled) {
-    Serial.println("RTC is the same as compile time! (not expected but all is fine)");
+    printf("RTC is the same as compile time! (not expected but all is fine)\n");
+  }
+
+  while (1) {
+    static uint32_t lastTime = 0;
+    if (!cyw43_wifi_scan_active(&cyw43_state) && scan_started) {
+      // Start a scan in 10s
+      scan_started = false;
+      hard_assert(async_context_add_at_time_worker_in_ms(cyw43_arch_async_context(), &scan_worker, 10000));
+    }
+    cyw43_arch_poll();
+    cyw43_arch_wait_for_work_until(at_the_end_of_time);
+    if (to_ms_since_boot(get_absolute_time()) - lastTime >= delayMS) {
+      performPrintDateTime();
+      readTemperatureAndHumidity();
+      lastTime = to_ms_since_boot(get_absolute_time());
+    }
+    readIncidentLight();
+    sleep_ms(1000);
   }
 }
 
-void loop() {
-  static uint32_t lastTime = 0;
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("Você está conectado!");
+static int scan_result(void* env, const cyw43_ev_scan_result_t* result) {
+  if (result) {
+    printf("ssid: %-32s rssi: %4d chan: %3d mac: %02x:%02x:%02x:%02x:%02x:%02x sec: %u\n", result->ssid, result->rssi, result->channel,
+           result->bssid[0], result->bssid[1], result->bssid[2], result->bssid[3], result->bssid[4], result->bssid[5], result->auth_mode);
   }
-  if (millis() - lastTime >= delayMS) {
-    performPrintDateTime();
-    readTemperatureAndHumidity();
-    lastTime = millis();
-  }
-  readIncidentLight();
-  delay(1000);
+  return 0;
 }
 
-void getNetworkList() {
-  delay(2000);
-  Serial.printf("Iniciando o escaneamento em %lu\n", millis());
-  auto cnt = WiFi.scanNetworks();
-  while (!cnt) {
-    Serial.printf("Nenhuma rede encontrada\n");
+// Start a wifi scan
+void scan_worker_fn(async_context_t* context, async_at_time_worker_t* worker) {
+  cyw43_wifi_scan_options_t scan_options = { 0 };
+  int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result);
+  if (err == 0) {
+    bool* scan_started = (bool*)worker->user_data;
+    *scan_started = true;
+    printf("Iniciando o escaneamento em %lu\n", to_ms_since_boot(get_absolute_time()));
+  } else {
+    printf("Failed to start scan: %d\n", err);
   }
-
-  Serial.printf("Encontrado %d redes\n\n", cnt);
-  Serial.printf("%32s %5s %17s %2s %4s\n", "SSID", "ENC", "BSSID        ", "CH", "RSSI");
-  for (uint8_t i = 0; i < cnt; i++) {
-    uint8_t bssid[6];
-    WiFi.BSSID(i, bssid);
-    Serial.printf("%32s %5s %17s %2d %4ld\n", WiFi.SSID(i), encToString(WiFi.encryptionType(i)), macToString(bssid), WiFi.channel(i), WiFi.RSSI(i));
-  }
-
-  delay(2000);
 }
 
 void connectToInternet() {
   getNetworkList();
 
-  Serial.print("Escreva o nome da internet para conectar:");
+  printf("Escreva o nome da internet para conectar:");
   // NOLINTNEXTLINE (readability-braces-around-statements)
   while (Serial.available() == 0);
   if (String inputSSID = Serial.readStringUntil('\n'); inputSSID == "") {
-    Serial.println("SSID não foi digitada, usando da programação");
+    printf("SSID não foi digitada, usando da programação\n");
   }
 
-  Serial.print("Agora a senha da internet:");
+  printf("Agora a senha da internet:");
   // NOLINTNEXTLINE (readability-braces-around-statements)
   while (Serial.available() == 0);
   if (String inputPASSWORD = Serial.readStringUntil('\n'); inputPASSWORD == "") {
-    Serial.println("Senha não foi digitada, usando da programação");
+    printf("Senha não foi digitada, usando da programação\n");
   }
 
-  Serial.printf("O nome do wifi é %s e sua senha do wifi é %s.\n", ssid, password);
+  printf("O nome do wifi é %s e sua senha do wifi é %s.\n", ssid, password);
 
-  Serial.print("Conectando");
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-
-    if (WiFi.status() == WL_CONNECT_FAILED) {
-      Serial.print("A conexão falhou tente mais tarde");
-      return;
-    }
+  printf("Conectando");
+  cyw43_arch_enable_sta_mode();
+  printf("Connecting to Wi-Fi... (press 'd' to disconnect)\n");
+  if (cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, 30000)) {
+    printf("failed to connect.\n");
+    return;
   }
-  Serial.println();
 
-  Serial.printf("Conectado, IP address: %s\n", WiFi.localIP().toString().c_str());
+  printf("\n");
+
+  if (netif_default) {
+    printf("Conectado, IP address: %s\n", ip4addr_ntoa(&netif_default->ip_addr));
+  }
 }
 
 void printDateTime(const RtcDateTime& dateTime) {
@@ -160,60 +185,49 @@ void printDateTime(const RtcDateTime& dateTime) {
 
   snprintf(datestring, std::size(datestring), "%02u/%02u/%04u %02u:%02u:%02u", dateTime.Month(), dateTime.Day(), dateTime.Year(), dateTime.Hour(),
            dateTime.Minute(), dateTime.Second());
-  Serial.print(datestring);
+  printf(datestring);
 }
 
 void performPrintDateTime() {
   RtcDateTime now = RTC.GetDateTime();
 
   printDateTime(now);
-  Serial.println();
+  printf("\n");
 
   if (!now.IsValid()) {
     // Common Causes:
     //    1) the battery on the device is low or even missing and the power line was disconnected
-    Serial.println("RTC lost confidence in the DateTime!");
+    printf("RTC lost confidence in the DateTime!\n");
   }
 }
 
 void readTemperatureAndHumidity() {
   sensors_event_t event;
   dht.temperature().getEvent(&event);
-  if (isnan(event.temperature)) {
-    Serial.println("Error reading temperature!");
+  if (event.temperature == NULL) {
+    printf("Error reading temperature!\n");
   } else {
-    Serial.printf("Temperature: %.2f °C\n", event.temperature);
+    printf("Temperature: %.2f °C\n", event.temperature);
   }
 
   dht.humidity().getEvent(&event);
-  if (isnan(event.relative_humidity)) {
-    Serial.println("Error reading humidity!");
+  if (event.relative_humidity == NULL) {
+    printf("Error reading humidity!\n");
   } else {
-    Serial.printf("Humidity: %.2f %%\n", event.relative_humidity);
+    printf("Humidity: %.2f %%\n", event.relative_humidity);
   }
+}
+
+template <typename T, typename U> U map(T value, T in_min, T in_max, U out_min, U out_max) {
+  return static_cast<U>(((value - in_min) * (out_max - out_min) / (in_max - in_min)) + out_min);
 }
 
 void readIncidentLight() {
-  const uint8_t OFFSET_VAL = 100;
+  const uint16_t OFFSET_VAL = 100;
   const uint8_t MAX_PERCENT = 100;
 
-  auto adcRead = static_cast<uint16_t>(analogRead(PIN_LDR));
-  uint32_t lux = map(adcRead, OFFSET_VAL, ANALOG_RES - 1, 0, MAX_PERCENT);
-  Serial.printf("A quantidade de luz no ambiente é: %lu lm\n", lux);
-}
-
-const char* macToString(const uint8_t mac[6]) {
-  char buffer[31];
-  snprintf(buffer, std::size(buffer), "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  return buffer;
-}
-
-const char* encToString(uint8_t enc) {
-  switch (enc) {
-    case ENC_TYPE_NONE: return "NONE";
-    case ENC_TYPE_TKIP: return "WPA";
-    case ENC_TYPE_CCMP: return "WPA2";
-    case ENC_TYPE_AUTO: return "AUTO";
-    default:            return "UNKN";
-  }
+  adc_select_input(PIN_LDR - ADC_BASE_PIN);
+  uint16_t adcRead = adc_read();
+  uint32_t lux = map(adcRead, OFFSET_VAL, static_cast<uint16_t>(ANALOG_RES - 1), static_cast<uint8_t>(0), MAX_PERCENT);
+  printf("A quantidade de luz no ambiente é: %lu lm\n", lux);
 }
