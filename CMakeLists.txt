@@ -70,7 +70,7 @@ if(TARGET tinyusb_device)
     pico_unique_id
     tinyusb_device
     tinyusb_board
-    pico_cyw43_arch_lwip_threadsafe_background
+    pico_sync
     pico_cyw43_arch_lwip_poll
     hardware_pwm
     hardware_clocks
