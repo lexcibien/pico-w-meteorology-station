@@ -1,16 +1,20 @@
 ---
-Checks:
-  "*,
+Checks: "*,
   -llvmlibc-*,
-  -cppcoreguidelines-pro-type-vararg,
-  -hicpp-vararg,
-  -modernize-use-std-print,
   -modernize-use-trailing-return-type,
   -misc-use-internal-linkage,
-  -altera-unroll-loops,
-  -cert-err33-c,
   -fuchsia-default-arguments-calls,
-  -modernize-use-trailing-return-type,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
+  -modernize-use-std-print,
+  -cppcoreguidelines-pro-type-vararg,
+  -hicpp-vararg,
+  -altera-unroll-loops,
+  -cppcoreguidelines-avoid-c-arrays,
+  -hicpp-avoid-c-arrays,
+  -modernize-avoid-c-arrays,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   -hicpp-no-array-decay"
 
