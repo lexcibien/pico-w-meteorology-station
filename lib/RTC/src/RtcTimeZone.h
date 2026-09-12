@@ -29,89 +29,74 @@ License along with Rtc.  If not, see
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <numeric>
 
-struct RtcTimeZone
-{
-    const char* abbr; // progmem
-    int32_t offset;
+struct RtcTimeZone {
+  const char* abbr; // progmem
+  int32_t offset;
 
-	// searches the given table for the abbr match
-	//  result - the found entry
-	//  abbrSearch - the abbreviation to search for
-	//  table - the PROGMEM table of RtcTimeZone in alphabetical order
-	//  count - the number of entries in the table
-	//  returns: 0 for not found, strlen of abbr if found
-	//
-    static size_t BinarySearchProgmemTable(RtcTimeZone* result,
-        const char* abbrSearch,
-        const RtcTimeZone* table,
-        size_t countTable)
-    {
-		size_t indexFront = 0;
-		size_t indexEnd = countTable;
-		size_t index = countTable / 2;
+  // searches the given table for the abbr match
+  //  result - the found entry
+  //  abbrSearch - the abbreviation to search for
+  //  table - the PROGMEM table of RtcTimeZone in alphabetical order
+  //  count - the number of entries in the table
+  //  returns: 0 for not found, strlen of abbr if found
+  //
+  static size_t BinarySearchProgmemTable(RtcTimeZone* result, const char* abbrSearch, const RtcTimeZone* table, size_t countTable) {
+    size_t indexFront = 0;
+    size_t indexEnd = countTable;
+    size_t index = countTable / 2;
 
-		// binary search
-		//
-		while (indexFront < indexEnd)
-		{
-			RtcTimeZone entry;
+    // binary search
+    //
+    while (indexFront < indexEnd) {
+      RtcTimeZone entry{};
 
-			// copy the entry from progmem
-			// string members still reside in PROGMEM though
-			memcpy(&entry, table + index, sizeof(RtcTimeZone));
+      // copy the entry from progmem
+      // string members still reside in PROGMEM though
+      memcpy(&entry, table + index, sizeof(RtcTimeZone));
 
-			auto match = strncmp(abbrSearch, entry.abbr, 4);
+      auto match = strncmp(abbrSearch, entry.abbr, 4);
 
-			if (0 == match)
-			{
-				// found
-				*result = entry;
-				return strlen(entry.abbr);
-			}
-			else if (match < 0)
-			{
-				indexEnd = index;
-			}
-			else
-			{
-				indexFront = index + 1;
-			}
+      if (0 == match) {
+        // found
+        *result = entry;
+        return strlen(entry.abbr);
+      }
+      if (match < 0) {
+        indexEnd = index;
+      } else {
+        indexFront = index + 1;
+      }
 
-			// pick one between the front and end
-			index = (indexEnd - indexFront) / 2 + indexFront;
-		}
-
-		return 0;
+      // pick one between the front and end
+      index = std::midpoint(indexFront, indexEnd);
     }
 
-	// searches the given table for the abbr match
-	//  result - the found entry
-	//  abbrSearch - the abbreviation to search for
-	//  table - the PROGMEM table of RtcTimeZone to search
-	//  count - the number of entries in the table
-	//  returns: 0 for not found, strlen of abbr if found
-	//
-	static size_t LinearSearchProgmemTable(RtcTimeZone* result,
-		const char* abbrSearch,
-		const RtcTimeZone* table,
-		size_t countTable)
-	{
-		for (size_t index = 0; index < countTable; index++)
-		{
-			RtcTimeZone entry;
+    return 0;
+  }
 
-			// copy the entry from progmem
-			// string members still reside in PROGMEM though
-			memcpy(&entry, table + index, sizeof(RtcTimeZone));
+  // searches the given table for the abbr match
+  //  result - the found entry
+  //  abbrSearch - the abbreviation to search for
+  //  table - the PROGMEM table of RtcTimeZone to search
+  //  count - the number of entries in the table
+  //  returns: 0 for not found, strlen of abbr if found
+  //
+  static size_t LinearSearchProgmemTable(RtcTimeZone* result, const char* abbrSearch, const RtcTimeZone* table, size_t countTable) {
+    for (size_t index = 0; index < countTable; index++) {
+      RtcTimeZone entry{};
 
-			if (0 == strncmp(abbrSearch, entry.abbr, 4))
-			{
-				*result = entry;
-				return strlen(entry.abbr);
-			}
-		}
+      // copy the entry from progmem
+      // string members still reside in PROGMEM though
+      memcpy(&entry, table + index, sizeof(RtcTimeZone));
 
-		return 0;
-	}
+      if (0 == strncmp(abbrSearch, entry.abbr, 4)) {
+        *result = entry;
+        return strlen(entry.abbr);
+      }
+    }
+
+    return 0;
+  }
 };

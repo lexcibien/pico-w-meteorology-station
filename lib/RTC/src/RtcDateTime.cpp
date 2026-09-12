@@ -24,123 +24,91 @@ License along with Rtc.  If not, see
 <http://www.gnu.org/licenses/>.
 -------------------------------------------------------------------------*/
 
-#include <pico/stdlib.h>
-#include "RtcUtility.h"
 #include "RtcDateTime.h"
+#include <pico/stdlib.h>
 
-const uint8_t c_daysInMonth[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
+const uint8_t c_daysInMonth[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
-
-template <typename T> T DaysSinceFirstOfYear2000(uint16_t year, uint8_t month, uint8_t dayOfMonth)
-{
-    T days = dayOfMonth;
-    for (uint8_t indexMonth = 1; indexMonth < month; ++indexMonth)
-    {
-        days += c_daysInMonth[indexMonth - 1];
-    }
-    if (month > 2 && year % 4 == 0)
-    {
-        days++;
-    }
-    return days + 365 * year + (year + 3) / 4 - 1;
+template <typename T> T DaysSinceFirstOfYear2000(uint16_t year, uint8_t month, uint8_t dayOfMonth) {
+  T days = dayOfMonth;
+  for (uint8_t indexMonth = 1; indexMonth < month; ++indexMonth) {
+    days += c_daysInMonth[indexMonth - 1];
+  }
+  if (month > 2 && year % 4 == 0) {
+    days++;
+  }
+  return days + (365 * year) + ((year + 3) / 4) - 1;
 }
 
-template <typename T> T SecondsIn(T days, uint8_t hours, uint8_t minutes, uint8_t seconds)
-{
-    return ((days * 24L + hours) * 60 + minutes) * 60 + seconds;
+template <typename T> T SecondsIn(T days, uint8_t hours, uint8_t minutes, uint8_t seconds) {
+  return (((((days * 24L) + hours) * 60) + minutes) * 60) + seconds;
 }
 
-bool RtcDateTime::IsValid() const
-{
-    // this just tests the most basic validity of the value ranges
-    // and valid leap years
-    // It does not check any time zone or daylight savings time
-    if ((_month > 0 && _month < 13) &&
-        (_dayOfMonth > 0 && _dayOfMonth < 32) &&
-        (_hour < 24) &&
-        (_minute < 60) &&
-        (_second < 60))
-    {
-        // days in a month tests
-        //
-        if (_month == 2)
-        {
-            if (_dayOfMonth > 29)
-            {
-                return false;
-            }
-            else if (_dayOfMonth > 28)
-            {
-                // leap day
-                // check year to make sure its a leap year
-                uint16_t year = Year();
+bool RtcDateTime::IsValid() const {
+  // this just tests the most basic validity of the value ranges
+  // and valid leap years
+  // It does not check any time zone or daylight savings time
+  if ((_month > 0 && _month < 13) && (_dayOfMonth > 0 && _dayOfMonth < 32) && (_hour < 24) && (_minute < 60) && (_second < 60)) {
+    // days in a month tests
+    //
+    if (_month == 2) {
+      if (_dayOfMonth > 29) {
+        return false;
+      }
+      if (_dayOfMonth > 28) {
+        // leap day
+        // check year to make sure its a leap year
+        uint16_t year = Year();
 
-                if ((year % 4) != 0)
-                {
-                    return false;
-                }
-
-                if ((year % 100) == 0 &&
-                    (year % 400) != 0)
-                {
-                    return false;
-                }
-            }
-        }
-        else if (_dayOfMonth == 31)
-        {
-            if ((((_month - 1) % 7) % 2) == 1)
-            {
-                return false;
-            }
+        if ((year % 4) != 0) {
+          return false;
         }
 
-        return true;
+        if ((year % 100) == 0 && (year % 400) != 0) {
+          return false;
+        }
+      }
+    } else if (_dayOfMonth == 31 && (((_month - 1) % 7) % 2) == 1) {
+      return false;
     }
-    return false;
+
+    return true;
+  }
+  return false;
 }
 
-uint8_t RtcDateTime::DayOfWeek() const
-{
-    uint16_t days = DaysSinceFirstOfYear2000<uint16_t>(_yearFrom2000, _month, _dayOfMonth);
-    return (days + 6) % 7; // Jan 1, 2000 is a Saturday, i.e. returns 6
+uint8_t RtcDateTime::DayOfWeek() const {
+  auto days = DaysSinceFirstOfYear2000<uint16_t>(_yearFrom2000, _month, _dayOfMonth);
+  return (days + 6) % 7; // Jan 1, 2000 is a Saturday, i.e. returns 6
 }
 
 // 32-bit time; as seconds since 1/1/2000
-uint32_t RtcDateTime::TotalSeconds() const
-{
-	uint16_t days = DaysSinceFirstOfYear2000<uint16_t>(_yearFrom2000, _month, _dayOfMonth);
-	return SecondsIn<uint32_t>(days, _hour, _minute, _second);
+uint32_t RtcDateTime::TotalSeconds() const {
+  auto days = DaysSinceFirstOfYear2000<uint16_t>(_yearFrom2000, _month, _dayOfMonth);
+  return SecondsIn<uint32_t>(days, _hour, _minute, _second);
 }
 
 // 64-bit time; as seconds since 1/1/2000
-uint64_t RtcDateTime::TotalSeconds64() const
-{
-	uint32_t days = DaysSinceFirstOfYear2000<uint32_t>(_yearFrom2000, _month, _dayOfMonth);
-	return SecondsIn<uint64_t>(days, _hour, _minute, _second);
+uint64_t RtcDateTime::TotalSeconds64() const {
+  auto days = DaysSinceFirstOfYear2000<uint32_t>(_yearFrom2000, _month, _dayOfMonth);
+  return SecondsIn<uint64_t>(days, _hour, _minute, _second);
 }
 
 // total days since 1/1/2000
-uint16_t RtcDateTime::TotalDays() const
-{
-	return DaysSinceFirstOfYear2000<uint16_t>(_yearFrom2000, _month, _dayOfMonth);
-}
+uint16_t RtcDateTime::TotalDays() const { return DaysSinceFirstOfYear2000<uint16_t>(_yearFrom2000, _month, _dayOfMonth); }
 
 // return the next day that falls on the given day of week
 // if this day is that day of week, it will return this day
-RtcDateTime RtcDateTime::NextDayOfWeek(uint8_t dayOfWeek) const
-{
-    uint8_t currentDayOfWeek = DayOfWeek();
-    RtcDateTime result;
-    int8_t delta = (dayOfWeek - currentDayOfWeek);
+RtcDateTime RtcDateTime::NextDayOfWeek(uint8_t dayOfWeek) const {
+  uint8_t currentDayOfWeek = DayOfWeek();
+  RtcDateTime result;
+  auto delta = static_cast<int8_t>(dayOfWeek - currentDayOfWeek);
 
-    // only want time in the future
-    if (delta < 0)
-    {
-        delta += 7;
-    }
+  // only want time in the future
+  if (delta < 0) {
+    delta += 7;
+  }
 
-    result = *this + (delta * c_DayAsSeconds);
-    return result;
+  result = *this + (delta * c_DayAsSeconds);
+  return result;
 }
-

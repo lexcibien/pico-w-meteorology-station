@@ -1,8 +1,8 @@
 #include <DHT.h>
 #include <DHT_U.h>
 #include <cstdio>
+#include <cstring>
 #include <hardware/adc.h>
-#include <iterator>
 #include <lwip/ip4_addr.h>
 #include <lwip/netif.h>
 #include <pico/cyw43_arch.h>
@@ -29,26 +29,26 @@ constexpr const char* password = "";
 
 const uint16_t ANALOG_RES = 1U << 12U;
 
-DHT_Unified dht(PIN_DHT11_DATA, DHT11);
-
-ThreeWire myWire(PIN_RTC_DAT, PIN_RTC_CLK, PIN_RTC_RST); // IO, SCLK, CE
-RtcDS1302<ThreeWire> RTC(myWire);
-
 void getNetworkList();
 void connectToInternet();
 void readIncidentLight();
 void readTemperatureAndHumidity();
 void printDateTime(const RtcDateTime& dateTime);
 void performPrintDateTime();
-static void scan_worker_fn(async_context_t* context, async_at_time_worker_t* worker);
+void scan_worker_fn(async_context_t* context, async_at_time_worker_t* worker);
+const char* readStringUntilNewLine();
 
-uint32_t delayMS;
+DHT_Unified dht(PIN_DHT11_DATA, DHT11);
+ThreeWire myWire(PIN_RTC_DAT, PIN_RTC_CLK, PIN_RTC_RST); // IO, SCLK, CE
+RtcDS1302<ThreeWire> RTC(myWire);
 
 int main() {
+  uint32_t delayMS = 0;
+
   stdio_init_all();
   sleep_ms(10000);
 
-  if (cyw43_arch_init()) {
+  if (cyw43_arch_init() != 0) {
     printf("failed to initialise\n");
     return 1;
   }
@@ -96,8 +96,7 @@ int main() {
     RTC.SetIsRunning(true);
   }
 
-  RtcDateTime now = RTC.GetDateTime();
-  if (now < compiled) {
+  if (RtcDateTime now = RTC.GetDateTime(); now < compiled) {
     printf("RTC is older than compile time!  (Updating DateTime)\n");
     RTC.SetDateTime(compiled);
   } else if (now > compiled) {
@@ -106,7 +105,7 @@ int main() {
     printf("RTC is the same as compile time! (not expected but all is fine)\n");
   }
 
-  while (1) {
+  while (true) {
     static uint32_t lastTime = 0;
     if (!cyw43_wifi_scan_active(&cyw43_state) && scan_started) {
       // Start a scan in 10s
@@ -125,8 +124,8 @@ int main() {
   }
 }
 
-static int scan_result(void* env, const cyw43_ev_scan_result_t* result) {
-  if (result) {
+int scan_result(void*  /*env*/, const cyw43_ev_scan_result_t* result) {
+  if (result != nullptr) {
     printf("ssid: %-32s rssi: %4d chan: %3d mac: %02x:%02x:%02x:%02x:%02x:%02x sec: %u\n", result->ssid, result->rssi, result->channel,
            result->bssid[0], result->bssid[1], result->bssid[2], result->bssid[3], result->bssid[4], result->bssid[5], result->auth_mode);
   }
@@ -134,11 +133,11 @@ static int scan_result(void* env, const cyw43_ev_scan_result_t* result) {
 }
 
 // Start a wifi scan
-void scan_worker_fn(async_context_t* context, async_at_time_worker_t* worker) {
-  cyw43_wifi_scan_options_t scan_options = { 0 };
-  int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result);
+void scan_worker_fn(async_context_t* /*context*/, async_at_time_worker_t* worker) {
+  cyw43_wifi_scan_options_t scan_options = { .version = 0 };
+  int err = cyw43_wifi_scan(&cyw43_state, &scan_options, nullptr, scan_result);
   if (err == 0) {
-    bool* scan_started = (bool*)worker->user_data;
+    auto* scan_started = static_cast<bool*>(worker->user_data);
     *scan_started = true;
     printf("Iniciando o escaneamento em %lu\n", to_ms_since_boot(get_absolute_time()));
   } else {
@@ -150,16 +149,12 @@ void connectToInternet() {
   getNetworkList();
 
   printf("Escreva o nome da internet para conectar:");
-  // NOLINTNEXTLINE (readability-braces-around-statements)
-  while (Serial.available() == 0);
-  if (String inputSSID = Serial.readStringUntil('\n'); inputSSID == "") {
+  if (strcmp(readStringUntilNewLine(), "") != 0) {
     printf("SSID não foi digitada, usando da programação\n");
   }
 
   printf("Agora a senha da internet:");
-  // NOLINTNEXTLINE (readability-braces-around-statements)
-  while (Serial.available() == 0);
-  if (String inputPASSWORD = Serial.readStringUntil('\n'); inputPASSWORD == "") {
+  if (strcmp(readStringUntilNewLine(), "") != 0) {
     printf("Senha não foi digitada, usando da programação\n");
   }
 
@@ -168,31 +163,57 @@ void connectToInternet() {
   printf("Conectando");
   cyw43_arch_enable_sta_mode();
   printf("Connecting to Wi-Fi... (press 'd' to disconnect)\n");
-  if (cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, 30000)) {
+  if (cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, 30000) != 0) {
     printf("failed to connect.\n");
     return;
   }
 
-  printf("\n");
+  putchar('\n');
 
-  if (netif_default) {
+  if (netif_default != nullptr) {
     printf("Conectado, IP address: %s\n", ip4addr_ntoa(&netif_default->ip_addr));
   }
 }
 
-void printDateTime(const RtcDateTime& dateTime) {
-  char datestring[31];
+const char* readStringUntilNewLine() {
 
-  snprintf(datestring, std::size(datestring), "%02u/%02u/%04u %02u:%02u:%02u", dateTime.Month(), dateTime.Day(), dateTime.Year(), dateTime.Hour(),
-           dateTime.Minute(), dateTime.Second());
-  printf(datestring);
+  static char buffer[32];
+  static uint8_t index = 0;
+  const char* string = "";
+
+  int chr = getchar_timeout_us(0);
+
+  if (chr == PICO_ERROR_TIMEOUT) {
+    return string;
+  }
+
+  if (chr == '\r' || chr == '\n') {
+
+    buffer[index] = '\0';
+
+    string = buffer;
+
+    index = 0;
+    (void)fflush(stdout);
+
+    return string;
+  }
+
+  if (index < sizeof(buffer) - 1) {
+    buffer[index++] = static_cast<char>(chr);
+  }
+  return string;
+}
+
+void printDateTime(const RtcDateTime& dateTime) {
+  printf("%02u/%02u/%04u %02u:%02u:%02u", dateTime.Month(), dateTime.Day(), dateTime.Year(), dateTime.Hour(), dateTime.Minute(), dateTime.Second());
 }
 
 void performPrintDateTime() {
   RtcDateTime now = RTC.GetDateTime();
 
   printDateTime(now);
-  printf("\n");
+  putchar('\n');
 
   if (!now.IsValid()) {
     // Common Causes:
@@ -204,14 +225,14 @@ void performPrintDateTime() {
 void readTemperatureAndHumidity() {
   sensors_event_t event;
   dht.temperature().getEvent(&event);
-  if (event.temperature == NULL) {
+  if (event.temperature == NAN) {
     printf("Error reading temperature!\n");
   } else {
     printf("Temperature: %.2f °C\n", event.temperature);
   }
 
   dht.humidity().getEvent(&event);
-  if (event.relative_humidity == NULL) {
+  if (event.relative_humidity == NAN) {
     printf("Error reading humidity!\n");
   } else {
     printf("Humidity: %.2f %%\n", event.relative_humidity);

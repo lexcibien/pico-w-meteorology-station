@@ -54,8 +54,8 @@ class DHT_Unified {
   class Temperature : public Adafruit_Sensor {
    public:
     Temperature(DHT_Unified* parent, int32_t id);
-    bool getEvent(sensors_event_t* event);
-    void getSensor(sensor_t* sensor);
+    bool getEvent(sensors_event_t* event) override;
+    void getSensor(sensor_t* sensor) override;
 
    private:
     DHT_Unified* _parent;
@@ -68,8 +68,8 @@ class DHT_Unified {
   class Humidity : public Adafruit_Sensor {
    public:
     Humidity(DHT_Unified* parent, int32_t id);
-    bool getEvent(sensors_event_t* event);
-    void getSensor(sensor_t* sensor);
+    bool getEvent(sensors_event_t* event) override;
+    void getSensor(sensor_t* sensor) override;
 
    private:
     DHT_Unified* _parent;
@@ -98,8 +98,8 @@ class DHT_Unified {
   Temperature _temp;
   Humidity _humidity;
 
-  void setName(sensor_t* sensor);
-  void setMinDelay(sensor_t* sensor);
+  void setName(sensor_t* sensor) const;
+  void setMinDelay(sensor_t* sensor) const;
 };
 
 #endif

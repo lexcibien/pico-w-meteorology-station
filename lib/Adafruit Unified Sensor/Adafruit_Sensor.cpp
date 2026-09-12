@@ -1,4 +1,4 @@
-#include "Adafruit_Sensor.h"
+#include <Adafruit_Sensor.h>
 #include <cstdio>
 
 /**************************************************************************/
@@ -12,7 +12,7 @@ void Adafruit_Sensor::printSensorDetails(void) {
   printf("------------------------------------\n");
   printf("Sensor:       %s\n", sensor.name);
   printf("Type:         ");
-  switch ((sensors_type_t)sensor.type) {
+  switch (static_cast<sensors_type_t>(sensor.type)) {
   case SENSOR_TYPE_ACCELEROMETER:
     printf("Acceleration (m/s2)");
     break;

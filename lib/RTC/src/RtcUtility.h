@@ -66,24 +66,20 @@ License along with Rtc.  If not, see
 // https://www.arduino.cc/reference/en/language/functions/communication/wire/endtransmission/
 // So we define our own "standard" for this RTC library that match those
 //
-enum Rtc_Wire_Error
-{
-	Rtc_Wire_Error_None = 0,
-	Rtc_Wire_Error_TxBufferOverflow,
-	Rtc_Wire_Error_NoAddressableDevice,
-	Rtc_Wire_Error_UnsupportedRequest,
-	Rtc_Wire_Error_Unspecific,
-	Rtc_Wire_Error_CommunicationTimeout
+enum Rtc_Wire_Error : uint8_t {
+  Rtc_Wire_Error_None = 0,
+  Rtc_Wire_Error_TxBufferOverflow,
+  Rtc_Wire_Error_NoAddressableDevice,
+  Rtc_Wire_Error_UnsupportedRequest,
+  Rtc_Wire_Error_Unspecific,
+  Rtc_Wire_Error_CommunicationTimeout
 };
 
 // for some reason, the DUE board support does not define this, even though other non AVR archs do
 #ifndef _BV
-#define _BV(b) (1UL << (b))
+constexpr uint64_t _BV(uint8_t b) { return (1UL << b); }
 #endif
 
 extern uint8_t BcdToUint8(uint8_t val);
 extern uint8_t Uint8ToBcd(uint8_t val);
 extern uint8_t BcdToBin24Hour(uint8_t bcdHour);
-
-
-

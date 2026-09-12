@@ -27,6 +27,7 @@
 
 #include <hardware/clocks.h>
 #include <hardware/gpio.h>
+#include <math.h>
 #include <pico/time.h>
 
 #include <cmath>
@@ -35,6 +36,8 @@
 #define TIMEOUT                                      \
   UINT32_MAX /**< Used programmatically for timeout. \
                    Not a timeout duration. Type: uint32_t. */
+
+critical_section_t InterruptLock::my_crit_sec;
 
 inline uint32_t microseconds_to_clock_cycles(uint32_t us) {
   // clock_get_Hz(clk_sys) returns the frequency in Hz (e.g., 125000000)
@@ -51,19 +54,9 @@ inline uint32_t microseconds_to_clock_cycles(uint32_t us) {
  *  @param  count
  *          number of sensors
  */
-DHT::DHT(uint8_t pin, uint8_t type, uint8_t count) {
+DHT::DHT(uint8_t pin, uint8_t type, uint8_t count)
+    : _pin(pin), _type(type), _maxcycles(microseconds_to_clock_cycles(1000)) {
   (void)count; // Workaround to avoid compiler warning.
-  _pin = pin;
-  _type = type;
-#ifdef __AVR
-  _bit = digitalPinToBitMask(pin);
-  _port = digitalPinToPort(pin);
-#endif
-  _maxcycles =
-      microseconds_to_clock_cycles(1000); // 1 millisecond timeout for
-                                          // reading pulses from DHT sensor.
-  // Note that count is now ignored as the DHT reading algorithm adjusts itself
-  // based on the speed of the processor.
 }
 
 /*!
@@ -75,7 +68,7 @@ DHT::DHT(uint8_t pin, uint8_t type, uint8_t count) {
 void DHT::begin(uint8_t usec) {
   // set up the pins!
   gpio_init(_pin);
-  gpio_set_dir(_pin, GPIO_IN);
+  gpio_set_dir(_pin, GPIO_IN != 0U);
   gpio_pull_up(_pin);
   // Using this value makes sure that to_ms_since_boot(get_absolute_time()) -
   // lastreadtime will be
@@ -98,13 +91,13 @@ void DHT::begin(uint8_t usec) {
  *	@return Temperature value in selected scale
  */
 float DHT::readTemperature(bool S, bool force) {
-  float f = NULL;
+  float f = NAN;
 
   if (read(force)) {
     switch (_type) {
       case DHT11:
         f = data[2];
-        if (data[3] & 0x80) {
+        if ((data[3] & 0x80) != 0) {
           f = -1 - f;
         }
         f += (data[3] & 0x0f) * 0.1;
@@ -114,8 +107,8 @@ float DHT::readTemperature(bool S, bool force) {
         break;
       case DHT12:
         f = data[2];
-        f += (data[3] & 0x0f) * 0.1;
-        if (data[2] & 0x80) {
+        f += (data[3] & 0x0f) * 0.1F;
+        if ((data[2] & 0x80) != 0.0F) {
           f *= -1;
         }
         if (S) {
@@ -124,9 +117,10 @@ float DHT::readTemperature(bool S, bool force) {
         break;
       case DHT22:
       case DHT21:
-        f = ((uint16_t)(data[2] & 0x7F)) << 8 | data[3];
+      default:
+        f = (static_cast<uint16_t>(data[2] & 0x7F)) << 8 | data[3];
         f *= 0.1;
-        if (data[2] & 0x80) {
+        if ((data[2] & 0x80) != 0) {
           f *= -1;
         }
         if (S) {
@@ -145,7 +139,7 @@ float DHT::readTemperature(bool S, bool force) {
  *	@return float value in Fahrenheit
  */
 float DHT::convertCtoF(float c) {
-  return c * 1.8 + 32;
+  return (c * 1.8F) + 32;
 }
 
 /*!
@@ -155,7 +149,7 @@ float DHT::convertCtoF(float c) {
  *	@return float value in Celcius
  */
 float DHT::convertFtoC(float f) {
-  return (f - 32) * 0.55555;
+  return (f - 32) * 0.55555F;
 }
 
 /*!
@@ -165,16 +159,17 @@ float DHT::convertFtoC(float f) {
  *	@return float value - humidity in percent
  */
 float DHT::readHumidity(bool force) {
-  float f = NULL;
+  float f = NAN;
   if (read(force)) {
     switch (_type) {
       case DHT11:
       case DHT12:
-        f = data[0] + data[1] * 0.1;
+        f = data[0] + (data[1] * 0.1F);
         break;
       case DHT22:
       case DHT21:
-        f = ((uint16_t)data[0]) << 8 | data[1];
+      default:
+        f = (static_cast<uint16_t>(data[0])) << 8 | data[1];
         f *= 0.1;
         break;
     }
@@ -210,31 +205,34 @@ float DHT::computeHeatIndex(bool isFahrenheit) {
  */
 float DHT::computeHeatIndex(float temperature, float percentHumidity,
                             bool isFahrenheit) {
-  float hi;
+  float hi = NAN;
 
-  if (!isFahrenheit)
+  if (!isFahrenheit) {
     temperature = convertCtoF(temperature);
+  }
 
-  hi = 0.5 * (temperature + 61.0 + ((temperature - 68.0) * 1.2) +
-              (percentHumidity * 0.094));
+  hi = 0.5F * (temperature + 61.0F + ((temperature - 68.0F) * 1.2F) +
+               (percentHumidity * 0.094F));
 
   if (hi > 79) {
-    hi = -42.379 + 2.04901523 * temperature + 10.14333127 * percentHumidity +
-         -0.22475541 * temperature * percentHumidity +
-         -0.00683783 * pow(temperature, 2) +
-         -0.05481717 * pow(percentHumidity, 2) +
-         0.00122874 * pow(temperature, 2) * percentHumidity +
-         0.00085282 * temperature * pow(percentHumidity, 2) +
-         -0.00000199 * pow(temperature, 2) * pow(percentHumidity, 2);
+    hi = -42.379F + (2.04901523F * temperature) +
+         (10.14333127F * percentHumidity) +
+         (-0.22475541F * temperature * percentHumidity) +
+         (-0.00683783F * pow(temperature, 2)) +
+         (-0.05481717F * pow(percentHumidity, 2)) +
+         (0.00122874F * pow(temperature, 2) * percentHumidity) +
+         (0.00085282F * temperature * pow(percentHumidity, 2)) +
+         (-0.00000199F * pow(temperature, 2) * pow(percentHumidity, 2));
 
     if ((percentHumidity < 13) && (temperature >= 80.0) &&
-        (temperature <= 112.0))
-      hi -= ((13.0 - percentHumidity) * 0.25) *
-            sqrt((17.0 - abs(temperature - 95.0)) * 0.05882);
+        (temperature <= 112.0)) {
+      hi -= ((13.0F - percentHumidity) * 0.25F) *
+            sqrt((17.0F - abs(temperature - 95.0F)) * 0.05882F);
 
-    else if ((percentHumidity > 85.0) && (temperature >= 80.0) &&
-             (temperature <= 87.0))
-      hi += ((percentHumidity - 85.0) * 0.1) * ((87.0 - temperature) * 0.2);
+    } else if ((percentHumidity > 85.0F) && (temperature >= 80.0F) &&
+               (temperature <= 87.0F)) {
+      hi += ((percentHumidity - 85.0F) * 0.1F) * ((87.0F - temperature) * 0.2F);
+    }
   }
 
   return isFahrenheit ? hi : convertFtoC(hi);
@@ -269,13 +267,13 @@ bool DHT::read(bool force) {
   // Go into high impedence state to let pull-up raise data line level and
   // start the reading process.
   gpio_init(_pin);
-  gpio_set_dir(_pin, GPIO_IN);
+  gpio_set_dir(_pin, GPIO_IN != 0U);
   gpio_pull_up(_pin);
   sleep_ms(1);
 
   // First set data line low for a period according to sensor type
   gpio_init(_pin);
-  gpio_set_dir(_pin, GPIO_OUT);
+  gpio_set_dir(_pin, GPIO_OUT != 0U);
   gpio_put(_pin, false);
   switch (_type) {
     case DHT22:
@@ -292,7 +290,7 @@ bool DHT::read(bool force) {
   {
     // End the start signal by setting data line high for 40 microseconds.
     gpio_init(_pin);
-    gpio_set_dir(_pin, GPIO_IN);
+    gpio_set_dir(_pin, GPIO_IN != 0U);
     gpio_pull_up(_pin);
 
     // Delay a moment to let sensor pull data line low.
@@ -335,17 +333,17 @@ bool DHT::read(bool force) {
   // state cycle count), or 1 (high state cycle count > low state cycle count).
   for (int i = 0; i < 40; ++i) {
     uint32_t lowCycles = cycles[2 * i];
-    uint32_t highCycles = cycles[2 * i + 1];
+    uint32_t highCycles = cycles[(2 * i) + 1];
     if ((lowCycles == TIMEOUT) || (highCycles == TIMEOUT)) {
       DEBUG_PRINTLN(F("DHT timeout waiting for pulse."));
       _lastresult = false;
       return _lastresult;
     }
-    data[i / 8] <<= 1;
+    data[i / 8] <<= static_cast<uint8_t>(1);
     // Now compare the low and high cycle times to see if the bit is a 0 or 1.
     if (highCycles > lowCycles) {
       // High cycles are greater than 50us low cycle count, must be a 1.
-      data[i / 8] |= 1;
+      data[i / 8] |= static_cast<uint8_t>(1);
     }
     // Else high cycles are less than (or equal to, a weird case) the 50us low
     // cycle count so this must be a zero.  Nothing needs to be changed in the
@@ -369,11 +367,10 @@ bool DHT::read(bool force) {
   if (data[4] == ((data[0] + data[1] + data[2] + data[3]) & 0xFF)) {
     _lastresult = true;
     return _lastresult;
-  } else {
-    DEBUG_PRINTLN(F("DHT checksum failure!"));
-    _lastresult = false;
-    return _lastresult;
   }
+  DEBUG_PRINTLN(F("DHT checksum failure!"));
+  _lastresult = false;
+  return _lastresult;
 }
 
 // Expect the signal line to be at the specified level for a period of time and
@@ -383,7 +380,7 @@ bool DHT::read(bool force) {
 // This is adapted from Arduino's pulseInLong function (which is only available
 // in the very latest IDE versions):
 //   https://github.com/arduino/Arduino/blob/master/hardware/arduino/avr/cores/arduino/wiring_pulse.c
-uint32_t DHT::expectPulse(bool level) {
+uint32_t DHT::expectPulse(bool level) const {
 // F_CPU is not be known at compile time on platforms such as STM32F103.
 // The preprocessor seems to evaluate it to zero in that case.
 #if (F_CPU > 16000000L) || (F_CPU == 0L)

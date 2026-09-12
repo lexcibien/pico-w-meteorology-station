@@ -37,21 +37,21 @@ class ThreeWire {
 public:
   ThreeWire(uint8_t ioPin, uint8_t clkPin, uint8_t cePin) : _ioPin(ioPin), _clkPin(clkPin), _cePin(cePin) {}
 
-  void begin() { resetPins(); }
+  void begin() const { resetPins(); }
 
-  void end() { resetPins(); }
+  void end() const { resetPins(); }
 
-  void beginTransmission(uint8_t command) {
+  void beginTransmission(uint8_t command) const {
     gpio_put(_cePin, false); // default, not enabled
     gpio_init(_cePin);
-    gpio_set_dir(_cePin, GPIO_OUT);
+    gpio_set_dir(_cePin, GPIO_OUT != 0U);
 
     gpio_put(_clkPin, false); // default, clock low
     gpio_init(_clkPin);
-    gpio_set_dir(_clkPin, GPIO_OUT);
+    gpio_set_dir(_clkPin, GPIO_OUT != 0U);
 
     gpio_init(_ioPin);
-    gpio_set_dir(_ioPin, GPIO_OUT);
+    gpio_set_dir(_ioPin, GPIO_OUT != 0U);
 
     gpio_put(_cePin, true); // start the session
     sleep_us(4);            // tCC = 4us
@@ -59,14 +59,14 @@ public:
     write(command, (command & THREEWIRE_READFLAG) == THREEWIRE_READFLAG);
   }
 
-  void endTransmission() {
+  void endTransmission() const{
     gpio_put(_cePin, false);
     sleep_us(4); // tCWH = 4us
   }
 
-  void write(uint8_t value, bool isDataRequestCommand = false) {
+  void write(uint8_t value, bool isDataRequestCommand = false) const {
     for (uint8_t bit = 0; bit < 8; bit++) {
-      gpio_put(_ioPin, value & 0x01);
+      gpio_put(_ioPin, (value & 0x01) != 0);
       sleep_us(1); // tDC = 200ns
 
       // clock up, data is read by DS1302
@@ -77,7 +77,7 @@ public:
       // Set IO line for input before the clock down
       if (bit == 7 && isDataRequestCommand) {
         gpio_init(_ioPin);
-        gpio_set_dir(_ioPin, GPIO_IN);
+        gpio_set_dir(_ioPin, GPIO_IN != 0U);
       }
 
       gpio_put(_clkPin, false);
@@ -87,13 +87,13 @@ public:
     }
   }
 
-  uint8_t read() {
+  [[nodiscard]] uint8_t read() const {
     uint8_t value = 0;
 
     for (uint8_t bit = 0; bit < 8; bit++) {
       // first bit is present on io pin, so only clock the other
       // bits
-      value |= (gpio_get(_ioPin) << bit);
+      value |= (static_cast<int>(gpio_get(_ioPin)) << bit);
 
       // Clock up, prepare for next
       gpio_put(_clkPin, true);
@@ -108,20 +108,20 @@ public:
   }
 
 private:
-  const uint8_t _ioPin;
-  const uint8_t _clkPin;
-  const uint8_t _cePin;
+  uint8_t _ioPin;
+  uint8_t _clkPin;
+  uint8_t _cePin;
 
-  void resetPins() {
+  void resetPins() const {
     // just making sure they are in a default low power use state
     // as required state is set when transmissions are started
     // three wire devices have internal pull downs so they will be low
 
     gpio_init(_clkPin);
-    gpio_set_dir(_clkPin, GPIO_IN);
+    gpio_set_dir(_clkPin, GPIO_IN != 0U);
     gpio_init(_ioPin);
-    gpio_set_dir(_ioPin, GPIO_IN);
+    gpio_set_dir(_ioPin, GPIO_IN != 0U);
     gpio_init(_cePin);
-    gpio_set_dir(_cePin, GPIO_IN);
+    gpio_set_dir(_cePin, GPIO_IN != 0U);
   }
 };

@@ -26,17 +26,12 @@ License along with Rtc.  If not, see
 
 #pragma once
 
-// ESP32 complains if not included
-#if defined(ARDUINO_ARCH_ESP32)
-#include <inttypes.h>
-#endif
-
-#include "RtcLocaleEn.h"
 #include "RtcLocaleEnUs.h"
-#include "RtcTimeZone.h"
 #include <cmath>
+#include <cstdio>
+#include <cstring>
 
-enum DayOfWeek {
+enum DayOfWeek : uint8_t {
   DayOfWeek_Sunday = 0,
   DayOfWeek_Monday,
   DayOfWeek_Tuesday,
@@ -55,11 +50,11 @@ extern const uint8_t c_daysInMonth[];
 
 const uint32_t c_MinuteAsSeconds = 60;
 const uint32_t c_HourAsSeconds = 60 * c_MinuteAsSeconds;
-const uint32_t c_DayAsSeconds = 24 * c_HourAsSeconds;
+const int32_t c_DayAsSeconds = 24 * c_HourAsSeconds;
 const uint32_t c_WeekAsSeconds = 7 * c_DayAsSeconds;
 
 // AM PM
-enum RtcMeridiem { Rtc_AM, Rtc_PM };
+enum RtcMeridiem : uint8_t { Rtc_AM, Rtc_PM };
 
 // handy conversion class between 24 hour and 12 hour values
 //
@@ -70,7 +65,7 @@ public:
   // construct from a 24 hour units with validation
   // if outside bounds, wrap into bounds
   //
-  RtcHourAmPm(uint8_t hour24) {
+  explicit RtcHourAmPm(uint8_t hour24) {
     if (hour24 < 1 || hour24 > 23) {
       // midnight is 12am
       _hour = 12;
@@ -105,7 +100,7 @@ public:
 
   // covert to 24 hour units
   //
-  operator uint8_t() const {
+  explicit operator uint8_t() const {
     uint8_t result = _hour;
 
     if (result == 12) {
@@ -121,13 +116,13 @@ public:
 
   // properties
   //
-  uint8_t Hour() const { return _hour; }
+  [[nodiscard]] uint8_t Hour() const { return _hour; }
 
-  RtcMeridiem Meridiem() const { return _meridiem; }
+  [[nodiscard]] RtcMeridiem Meridiem() const { return _meridiem; }
 
-  uint8_t Hour24() const { return *this; }
+  [[nodiscard]] RtcHourAmPm Hour24() const { return *this; }
 
-protected:
+private:
   uint8_t _hour;
   RtcMeridiem _meridiem;
 };
@@ -150,40 +145,40 @@ public:
 
   bool IsValid() const;
 
-  uint16_t Year() const { return c_OriginYear + _yearFrom2000; }
+  [[nodiscard]] uint16_t Year() const { return c_OriginYear + _yearFrom2000; }
 
-  uint8_t Month() const { return _month; }
+  [[nodiscard]] uint8_t Month() const { return _month; }
 
-  uint8_t Day() const { return _dayOfMonth; }
+  [[nodiscard]] uint8_t Day() const { return _dayOfMonth; }
 
-  uint8_t Hour() const { return _hour; }
+  [[nodiscard]] uint8_t Hour() const { return _hour; }
 
-  RtcHourAmPm HourAmPm() const { return RtcHourAmPm(_hour); }
+  [[nodiscard]] RtcHourAmPm HourAmPm() const { return RtcHourAmPm(_hour); }
 
-  uint8_t Minute() const { return _minute; }
+  [[nodiscard]] uint8_t Minute() const { return _minute; }
 
-  uint8_t Second() const { return _second; }
+  [[nodiscard]] uint8_t Second() const { return _second; }
 
   // 0 = Sunday, 1 = Monday, ... 6 = Saturday
-  uint8_t DayOfWeek() const;
+  [[nodiscard]] uint8_t DayOfWeek() const;
 
   // 32-bit time; as seconds since 1/1/2000
-  uint32_t TotalSeconds() const;
+  [[nodiscard]] uint32_t TotalSeconds() const;
 
   // 64-bit time; as seconds since 1/1/2000
-  uint64_t TotalSeconds64() const;
+  [[nodiscard]] uint64_t TotalSeconds64() const;
 
   // total days since 1/1/2000
-  uint16_t TotalDays() const;
+  [[nodiscard]] uint16_t TotalDays() const;
 
   // return the next day that falls on the given day of week
   // if this day is that day of week, it will return this day
-  RtcDateTime NextDayOfWeek(uint8_t dayOfWeek) const;
+  [[nodiscard]] RtcDateTime NextDayOfWeek(uint8_t dayOfWeek) const;
 
   /*
   causes ambiguous overload for 'operator+'
   making explicit doesn't solve it
-  // add unsigned seconds
+  add unsigned seconds
   void operator += (uint32_t seconds)
   {
       *this = *this + seconds;
@@ -226,45 +221,19 @@ public:
 
   bool operator>(const RtcDateTime& right) { return (this->TotalSeconds() > right.TotalSeconds()); }
 
-  // Epoch32 support
-  [[deprecated("Use Unix32Time() instead.")]]
-  uint32_t Epoch32Time() const {
-    return TotalSeconds() + c_UnixEpoch32;
-  }
-  [[deprecated("Use InitWithUnix32Time() instead.")]]
-  void InitWithEpoch32Time(uint32_t secondsSince1970) {
-    _initWithSecondsFrom2000<uint32_t>(secondsSince1970 - c_UnixEpoch32);
-  }
-
-  // Epoch64 support
-  [[deprecated("Use Unix64Time() instead.")]]
-  uint64_t Epoch64Time() const {
-    return TotalSeconds64() + c_UnixEpoch32;
-  }
-  [[deprecated("Use InitWithUnix64Time() instead.")]]
-  void InitWithEpoch64Time(uint64_t secondsSince1970) {
-    _initWithSecondsFrom2000<uint64_t>(secondsSince1970 - c_UnixEpoch32);
-  }
-
   // Unix32 support
-  uint32_t Unix32Time() const { return TotalSeconds() + c_UnixEpoch32; }
+  [[nodiscard]] uint32_t Unix32Time() const { return TotalSeconds() + c_UnixEpoch32; }
   void InitWithUnix32Time(uint32_t secondsSince1970) { _initWithSecondsFrom2000<uint32_t>(secondsSince1970 - c_UnixEpoch32); }
   // Unix64 support
-  uint64_t Unix64Time() const { return TotalSeconds64() + c_UnixEpoch32; }
+  [[nodiscard]] uint64_t Unix64Time() const { return TotalSeconds64() + c_UnixEpoch32; }
   void InitWithUnix64Time(uint64_t secondsSince1970) { _initWithSecondsFrom2000<uint64_t>(secondsSince1970 - c_UnixEpoch32); }
 
   // Ntp32 support
-  uint32_t Ntp32Time() const { return TotalSeconds() + c_NtpEpoch32; }
+  [[nodiscard]] uint32_t Ntp32Time() const { return TotalSeconds() + c_NtpEpoch32; }
   void InitWithNtp32Time(uint32_t secondsSince1900) { _initWithSecondsFrom2000<uint32_t>(secondsSince1900 - c_NtpEpoch32); }
   // Ntp64 support
-  uint64_t Ntp64Time() const { return TotalSeconds64() + c_NtpEpoch32; }
+  [[nodiscard]] uint64_t Ntp64Time() const { return TotalSeconds64() + c_NtpEpoch32; }
   void InitWithNtp64Time(uint64_t secondsSince1900) { _initWithSecondsFrom2000<uint64_t>(secondsSince1900 - c_NtpEpoch32); }
-
-  [[deprecated("Use InitWithDateTimeFormatString()")]]
-  void InitWithIso8601(const char* date) {
-    // sample input: date = "Sat, 06 Dec 2009 12:34:56 GMT"
-    InitWithDateTimeFormatString<RtcLocaleEnUs>("*, DD MMM YYYY hh:mm:ss zzz", date);
-  }
 
   //
   // https://www.w3.org/TR/NOTE-datetime
@@ -321,14 +290,11 @@ public:
         size_t count = iEnd;
         size_t countConverted = 0;
 
-        // handy debug tracing
-        //
-        // Serial.print(scan[iStart]);
-        // Serial.print(">");
-        // Serial.print(convert);
-        // Serial.print("< ");
-        // Serial.print(count);
-        // Serial.println();
+// handy debug tracing
+//
+#ifdef DEBUG
+        printf("%c > %s < %d\n", scan[iStart], convert, count);
+#endif
 
         switch (scan[iStart]) {
           case '*': {
@@ -342,17 +308,11 @@ public:
             countConverted = skip - convert + 1;
             count++;
 
-            // handy debug tracing
-            //
-            // Serial.print("*>");
-            // Serial.print(scan + count);
-            // Serial.print("<->");
-            // Serial.print(convert + countConverted);
-            // Serial.print("< ");
-            // Serial.print(count);
-            // Serial.print("-");
-            // Serial.print(countConverted);
-            // Serial.println();
+// handy debug tracing
+//
+#ifdef DEBUG
+            printf("*> %s <-> %s < %d - %d", scan + count, convert + countConverted, count, countConverted);
+#endif
           } break;
 
           case '!': {
@@ -367,16 +327,10 @@ public:
             count++;
 
             // handy debug tracing
-            //
-            // Serial.print("!>");
-            // Serial.print(scan + count);
-            // Serial.print("<->");
-            // Serial.print(convert + countConverted);
-            // Serial.print("< ");
-            // Serial.print(count);
-            // Serial.print("-");
-            // Serial.print(countConverted);
-            // Serial.println();
+//
+#ifdef DEBUG
+            printf("!> %s <-> %s < %d - %d", scan + count, convert + countConverted, count, countConverted);
+#endif
           } break;
 
           case 'Y':
@@ -399,7 +353,8 @@ public:
             } else {
               if (count > 3) {
                 return convert - datetime;
-              } else if (count == 1) {
+              }
+              if (count == 1) {
                 const char* temp = convert;
                 // increment temp until matching char after M
                 while (*temp != scan[iEnd]) {
@@ -435,15 +390,15 @@ public:
               // +hh:mm or Z formated timezone
               // adjusting to local time
               if (*temp == '+' || *temp == '-') {
-                uint8_t hours;
-                uint8_t minutes;
+                uint8_t hours = 0;
+                uint8_t minutes = 0;
 
                 int32_t timezoneSign = (*temp == '+') ? 1 : -1;
                 temp++;
                 temp += CharsToNumber<uint8_t>(temp, &hours, 2);
                 temp++; // :
                 temp += CharsToNumber<uint8_t>(temp, &minutes, 2);
-                timezoneMinutes = (static_cast<int32_t>(hours) * 60 + minutes) * timezoneSign;
+                timezoneMinutes = ((static_cast<int32_t>(hours) * 60) + minutes) * timezoneSign;
 
                 countConverted = temp - datetime;
               } else if (*temp == 'Z' || *temp == 'z') {
@@ -513,13 +468,13 @@ public:
 
   static bool IsLeapYear(uint16_t year) { return ((year % 4) == 0); }
 
-protected:
-  uint8_t _yearFrom2000;
-  uint8_t _month;
-  uint8_t _dayOfMonth;
-  uint8_t _hour;
-  uint8_t _minute;
-  uint8_t _second;
+private:
+  uint8_t _yearFrom2000{};
+  uint8_t _month{};
+  uint8_t _dayOfMonth{};
+  uint8_t _hour{};
+  uint8_t _minute{};
+  uint8_t _second{};
 
   template <typename T> void _initWithSecondsFrom2000(T secondsFrom2000) {
     _second = secondsFrom2000 % 60;
@@ -532,13 +487,19 @@ protected:
 
     for (_yearFrom2000 = 0;; ++_yearFrom2000) {
       leapDays = (_yearFrom2000 % 4 == 0) ? 1 : 0;
-      if (days < 365U + leapDays) break;
+      if (days < 365U + leapDays) {
+        break;
+      }
       days -= 365 + leapDays;
     }
     for (_month = 1;; ++_month) {
       uint8_t daysPerMonth = c_daysInMonth[_month - 1];
-      if (leapDays && _month == 2) daysPerMonth++;
-      if (days < daysPerMonth) break;
+      if (leapDays && _month == 2) {
+        daysPerMonth++;
+      }
+      if (days < daysPerMonth) {
+        break;
+      }
       days -= daysPerMonth;
     }
     _dayOfMonth = days + 1;
@@ -552,14 +513,14 @@ protected:
   //         excludes leading non-numeral chars
   // return - the number to increment str for more processing,
   //          0 for failure
-  template <typename T_NUMBER> size_t CharsToNumber(const char* str, T_NUMBER* result, size_t count) {
+  template <typename T_NUMBER> size_t CharsToNumber(const char* str, T_NUMBER* result, size_t count) const {
     const char* scan = str;
     bool converted = false;
     size_t left = count;
 
     *result = 0;
 
-    // skip leading 0 and non numericals
+    // skip leading 0 and non numerical
     while (left && '\0' != *scan && ('0' >= *scan || '9' < *scan)) {
       // only decrement left with numerals
       if (left && '0' == *scan) {

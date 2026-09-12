@@ -27,6 +27,7 @@ License along with Rtc.  If not, see
 #include "RtcLocaleEnUs.h"
 #include "RtcTimeZone.h"
 #include <cctype>
+#include <span>
 
 // due to how works, strings must be declared standalone
 //
@@ -50,22 +51,22 @@ const char stringUTC[] = "UTC";
 // collection in alphabetic order of abbreviation
 //
 const RtcTimeZone c_tzEnUs[] = {
-  { .abbr=stringADT,  .offset=-3 * 60  }, // Atlantic Daylight Time
-  { .abbr=stringAKDT, .offset=-8 * 60  }, // Alaska Daylight Time
-  { .abbr=stringAKST, .offset=-9 * 60  }, // Alaska Standard Time
-  { .abbr=stringAST,  .offset=-4 * 60  }, // Atlantic Standard Time
-  { .abbr=stringCDT,  .offset=-5 * 60  }, // Central Daylight Time
-  { .abbr=stringCST,  .offset=-6 * 60  }, // Central Standard Time
-  { .abbr=stringEDT,  .offset=-4 * 60  }, // Eastern Daylight Time
-  { .abbr=stringEST,  .offset=-5 * 60  }, // Eastern Standard Time
-  { .abbr=stringGMT,  .offset=0        }, // Greenwich Mean Time
-  { .abbr=stringHDT,  .offset=-9 * 60  }, // Hawaii�Aleutian Daylight Time
-  { .abbr=stringHST,  .offset=-10 * 60 }, // Hawaii�Aleutian Standard Time
-  { .abbr=stringMDT,  .offset=-6 * 60  }, // Mountain Daylight Time
-  { .abbr=stringMST,  .offset=-7 * 60  }, // Mountain Standard Time
-  { .abbr=stringPDT,  .offset=-7 * 60  }, // Pacific Daylight Time
-  { .abbr=stringPST,  .offset=-8 * 60  }, // Pacific Standard Time
-  { .abbr=stringUTC,  .offset=0        }, // Cordinated Universal Time
+  { .abbr = stringADT,  .offset = -3 * 60  }, // Atlantic Daylight Time
+  { .abbr = stringAKDT, .offset = -8 * 60  }, // Alaska Daylight Time
+  { .abbr = stringAKST, .offset = -9 * 60  }, // Alaska Standard Time
+  { .abbr = stringAST,  .offset = -4 * 60  }, // Atlantic Standard Time
+  { .abbr = stringCDT,  .offset = -5 * 60  }, // Central Daylight Time
+  { .abbr = stringCST,  .offset = -6 * 60  }, // Central Standard Time
+  { .abbr = stringEDT,  .offset = -4 * 60  }, // Eastern Daylight Time
+  { .abbr = stringEST,  .offset = -5 * 60  }, // Eastern Standard Time
+  { .abbr = stringGMT,  .offset = 0        }, // Greenwich Mean Time
+  { .abbr = stringHDT,  .offset = -9 * 60  }, // Hawaii�Aleutian Daylight Time
+  { .abbr = stringHST,  .offset = -10 * 60 }, // Hawaii�Aleutian Standard Time
+  { .abbr = stringMDT,  .offset = -6 * 60  }, // Mountain Daylight Time
+  { .abbr = stringMST,  .offset = -7 * 60  }, // Mountain Standard Time
+  { .abbr = stringPDT,  .offset = -7 * 60  }, // Pacific Daylight Time
+  { .abbr = stringPST,  .offset = -8 * 60  }, // Pacific Standard Time
+  { .abbr = stringUTC,  .offset = 0        }, // Cordinated Universal Time
 };
 
 uint8_t RtcLocaleEnUs::CharsToMonth(const char* monthChars, size_t count) {
@@ -76,9 +77,13 @@ uint8_t RtcLocaleEnUs::CharsToMonth(const char* monthChars, size_t count) {
   if (count >= 3) {
     switch (tolower(monthChars[0])) {
       case 'j':
-        if (tolower(monthChars[1]) == 'a') month = 1;
-        else if (tolower(monthChars[2]) == 'n') month = 6;
-        else month = 7;
+        if (tolower(monthChars[1]) == 'a') {
+          month = 1;
+        } else if (tolower(monthChars[2]) == 'n') {
+          month = 6;
+        } else {
+          month = 7;
+        }
         break;
       case 'f': month = 2; break;
       case 'a': month = tolower(monthChars[1]) == 'p' ? 4 : 8; break;
@@ -87,6 +92,7 @@ uint8_t RtcLocaleEnUs::CharsToMonth(const char* monthChars, size_t count) {
       case 'o': month = 10; break;
       case 'n': month = 11; break;
       case 'd': month = 12; break;
+      default:  break;
     }
   }
   return month;
@@ -97,9 +103,9 @@ size_t RtcLocaleEnUs::TimeZoneMinutesFromAbbreviation(int32_t* minutes, const ch
 
   *minutes = 0;
 
-  size_t result = RtcTimeZone::BinarySearchProgmemTable(&entry, abbr, c_tzEnUs, sizeof(c_tzEnUs) / sizeof(c_tzEnUs[0]));
+  size_t result = RtcTimeZone::BinarySearchProgmemTable(&entry, abbr, c_tzEnUs, std::size(c_tzEnUs));
 
-  if (result) {
+  if (result != 0U) {
     // found
     *minutes = entry.offset;
   }

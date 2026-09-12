@@ -13,7 +13,9 @@
  *  from Adafruit!
  */
 #include "DHT_U.h"
+
 #include <pico/time.h>
+
 #include <cstring>
 
 /*!
@@ -48,7 +50,7 @@ void DHT_Unified::begin() {
  *  @param  sensor
  *          Sensor that will be set
  */
-void DHT_Unified::setName(sensor_t* sensor) {
+void DHT_Unified::setName(sensor_t* sensor) const {
   switch (_type) {
     case DHT11:
       strncpy(sensor->name, "DHT11", sizeof(sensor->name) - 1);
@@ -63,9 +65,6 @@ void DHT_Unified::setName(sensor_t* sensor) {
       strncpy(sensor->name, "DHT22", sizeof(sensor->name) - 1);
       break;
     default:
-      // TODO: Perhaps this should be an error?  However main DHT library
-      // doesn't enforce restrictions on the sensor type value.  Pick a generic
-      // name for now.
       strncpy(sensor->name, "DHT?", sizeof(sensor->name) - 1);
       break;
   }
@@ -77,20 +76,14 @@ void DHT_Unified::setName(sensor_t* sensor) {
  *  @param  sensor
  *          Sensor that will be set
  */
-void DHT_Unified::setMinDelay(sensor_t* sensor) {
+void DHT_Unified::setMinDelay(sensor_t* sensor) const {
   switch (_type) {
     case DHT11:
       sensor->min_delay = 1000000L; // 1 second (in microseconds)
       break;
     case DHT12:
-      sensor->min_delay = 2000000L; // 2 second (in microseconds)
-      break;
     case DHT21:
-      sensor->min_delay = 2000000L; // 2 seconds (in microseconds)
-      break;
     case DHT22:
-      sensor->min_delay = 2000000L; // 2 seconds (in microseconds)
-      break;
     default:
       // Default to slowest sample rate in case of unknown type.
       sensor->min_delay = 2000000L; // 2 seconds (in microseconds)
@@ -226,10 +219,6 @@ void DHT_Unified::Humidity::getSensor(sensor_t* sensor) {
       sensor->resolution = 5.0F;
       break;
     case DHT21:
-      sensor->max_value = 100.0F;
-      sensor->min_value = 0.0F;
-      sensor->resolution = 0.1F;
-      break;
     case DHT22:
       sensor->max_value = 100.0F;
       sensor->min_value = 0.0F;
