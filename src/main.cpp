@@ -40,7 +40,7 @@ const char* readStringUntilNewLine();
 
 DHT_Unified dht(PIN_DHT11_DATA, DHT11);
 ThreeWire myWire(PIN_RTC_DAT, PIN_RTC_CLK, PIN_RTC_RST); // IO, SCLK, CE
-RtcDS1302<ThreeWire> RTC(myWire);
+RtcDS1302 RTC(myWire);
 
 int main() {
   uint32_t delayMS = 0;
@@ -124,7 +124,7 @@ int main() {
   }
 }
 
-int scan_result(void*  /*env*/, const cyw43_ev_scan_result_t* result) {
+int scan_result(void* /*env*/, const cyw43_ev_scan_result_t* result) {
   if (result != nullptr) {
     printf("ssid: %-32s rssi: %4d chan: %3d mac: %02x:%02x:%02x:%02x:%02x:%02x sec: %u\n", result->ssid, result->rssi, result->channel,
            result->bssid[0], result->bssid[1], result->bssid[2], result->bssid[3], result->bssid[4], result->bssid[5], result->auth_mode);
@@ -225,14 +225,14 @@ void performPrintDateTime() {
 void readTemperatureAndHumidity() {
   sensors_event_t event;
   dht.temperature().getEvent(&event);
-  if (event.temperature == NAN) {
+  if (isnanf(event.temperature) != 0) {
     printf("Error reading temperature!\n");
   } else {
     printf("Temperature: %.2f °C\n", event.temperature);
   }
 
   dht.humidity().getEvent(&event);
-  if (event.relative_humidity == NAN) {
+  if (isnanf(event.relative_humidity) != 0) {
     printf("Error reading humidity!\n");
   } else {
     printf("Humidity: %.2f %%\n", event.relative_humidity);

@@ -159,11 +159,11 @@ public:
     uint8_t dayOfMonth = BcdToUint8(_wire.read());
     uint8_t month = BcdToUint8(_wire.read());
 
-    uint8_t _ = _wire.read(); // throwing away day of week as we calculate it
+    _wire.read(); // throwing away day of week as we calculate it
 
     uint16_t year = BcdToUint8(_wire.read()) + 2000;
 
-    uint8_t _ = _wire.read(); // throwing away write protect flag
+    _wire.read(); // throwing away write protect flag
 
     _wire.endTransmission();
 

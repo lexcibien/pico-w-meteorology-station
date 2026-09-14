@@ -87,7 +87,7 @@ public:
     }
   }
 
-  [[nodiscard]] uint8_t read() const {
+  uint8_t read() const {
     uint8_t value = 0;
 
     for (uint8_t bit = 0; bit < 8; bit++) {
