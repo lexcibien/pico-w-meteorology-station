@@ -1,5 +1,7 @@
 #include <DHT.h>
 #include <DHT_U.h>
+#include <RtcDS1302.h>
+#include <array>
 #include <cstdio>
 #include <cstring>
 #include <hardware/adc.h>
@@ -8,7 +10,6 @@
 #include <pico/cyw43_arch.h>
 #include <pico/stdio.h>
 #include <pico/time.h>
-#include <src/RtcDS1302.h>
 
 // Pinos módulos
 
