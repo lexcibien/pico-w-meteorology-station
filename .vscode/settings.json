@@ -8,8 +8,10 @@
     "clangtidy",
     "compiledb",
     "cppcheck",
+    "cppcoreguidelines",
     "earlephilhower",
     "fstack",
+    "llvmlibc",
     "makuna",
     "NOLINTNEXTLINE",
     "Philhower",
@@ -19,6 +21,7 @@
     "TKIP",
     "unflags",
     "UNKN",
+    "vararg",
     "Werror",
     "wifi"
   ],

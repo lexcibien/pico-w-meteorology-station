@@ -2,7 +2,9 @@
 #include <DHT.h>
 #include <DHT_U.h>
 #include <RtcDS1302.h>
-#include <WiFi.h>
+#include <WiFiClass.h>
+#include <array>
+#include <cstdint>
 
 // Pinos módulos
 
@@ -23,12 +25,12 @@ constexpr const char* password = "";
 
 const uint16_t ANALOG_RES = 1U << 10U;
 
-DHT_Unified dht(PIN_DHT11_DATA, DHT11);
+static DHT_Unified dht(PIN_DHT11_DATA, DHT11);
 
-ThreeWire myWire(PIN_RTC_DAT, PIN_RTC_CLK, PIN_RTC_RST); // IO, SCLK, CE
-RtcDS1302<ThreeWire> RTC(myWire);
+static ThreeWire myWire(PIN_RTC_DAT, PIN_RTC_CLK, PIN_RTC_RST); // IO, SCLK, CE
+static RtcDS1302<ThreeWire> RTC(myWire);
 
-static const char* macToString(const uint8_t mac[6]);
+static const char* macToString(std::array<uint8_t, 6> mac);
 static const char* encToString(uint8_t enc);
 static void getNetworkList();
 static void connectToInternet();
@@ -37,7 +39,7 @@ static void readTemperatureAndHumidity();
 static void printDateTime(const RtcDateTime& dateTime);
 static void performPrintDateTime();
 
-uint32_t delayMS;
+static uint32_t delayMS;
 
 void setup() {
   Serial.begin(115200);
@@ -51,7 +53,7 @@ void setup() {
 
   RTC.Begin();
 
-  auto compiled = RtcDateTime(__DATE__, __TIME__);
+  const auto compiled = RtcDateTime(__DATE__, __TIME__);
   printDateTime(compiled);
   Serial.println();
 
@@ -104,15 +106,17 @@ void getNetworkList() {
   delay(2000);
   Serial.printf("Iniciando o escaneamento em %lu\n", millis());
   auto cnt = WiFi.scanNetworks();
-  while (!cnt) {
+  while (cnt == 0) {
     Serial.printf("Nenhuma rede encontrada\n");
+    cnt = WiFi.scanNetworks();
+    delay(500);
   }
 
   Serial.printf("Encontrado %d redes\n\n", cnt);
   Serial.printf("%32s %5s %17s %2s %4s\n", "SSID", "ENC", "BSSID        ", "CH", "RSSI");
   for (uint8_t i = 0; i < cnt; i++) {
-    uint8_t bssid[6];
-    WiFi.BSSID(i, bssid);
+    std::array<uint8_t, 6> bssid{};
+    WiFi.BSSID(i, bssid.data());
     Serial.printf("%32s %5s %17s %2d %4ld\n", WiFi.SSID(i), encToString(WiFi.encryptionType(i)), macToString(bssid), WiFi.channel(i), WiFi.RSSI(i));
   }
 
@@ -156,15 +160,12 @@ void connectToInternet() {
 }
 
 void printDateTime(const RtcDateTime& dateTime) {
-  char datestring[31];
-
-  snprintf(datestring, std::size(datestring), "%02u/%02u/%04u %02u:%02u:%02u", dateTime.Month(), dateTime.Day(), dateTime.Year(), dateTime.Hour(),
-           dateTime.Minute(), dateTime.Second());
-  Serial.print(datestring);
+  Serial.printf("%02u/%02u/%04u %02u:%02u:%02u", dateTime.Month(), dateTime.Day(), dateTime.Year(), dateTime.Hour(), dateTime.Minute(),
+                dateTime.Second());
 }
 
 void performPrintDateTime() {
-  RtcDateTime now = RTC.GetDateTime();
+  const RtcDateTime now = RTC.GetDateTime();
 
   printDateTime(now);
   Serial.println();
@@ -197,15 +198,15 @@ void readIncidentLight() {
   const uint8_t OFFSET_VAL = 100;
   const uint8_t MAX_PERCENT = 100;
 
-  auto adcRead = static_cast<uint16_t>(analogRead(PIN_LDR));
-  uint32_t lux = map(adcRead, OFFSET_VAL, ANALOG_RES - 1, 0, MAX_PERCENT);
+  const auto adcRead = static_cast<uint16_t>(analogRead(PIN_LDR));
+  const uint32_t lux = map(adcRead, OFFSET_VAL, ANALOG_RES - 1, 0, MAX_PERCENT);
   Serial.printf("A quantidade de luz no ambiente é: %lu lm\n", lux);
 }
 
-const char* macToString(const uint8_t mac[6]) {
-  static char buffer[18];
-  snprintf(buffer, std::size(buffer), "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  return &buffer[0];
+const char* macToString(std::array<uint8_t, 6> mac) {
+  static std::array<char, 18> buffer{};
+  snprintf(buffer.data(), buffer.size(), "%02X:%02X:%02X:%02X:%02X:%02X", mac.at(0), mac.at(1), mac.at(2), mac.at(3), mac.at(4), mac.at(5));
+  return buffer.data();
 }
 
 const char* encToString(uint8_t enc) {
