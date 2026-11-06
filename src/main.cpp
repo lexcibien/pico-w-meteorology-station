@@ -31,17 +31,17 @@ constexpr const char* password = "";
 const uint16_t ANALOG_RES = 1U << 12U;
 
 void getNetworkList();
-void connectToInternet();
-void readIncidentLight();
-void readTemperatureAndHumidity();
-void printDateTime(const RtcDateTime& dateTime);
-void performPrintDateTime();
-void scan_worker_fn(async_context_t* context, async_at_time_worker_t* worker);
-const char* readStringUntilNewLine();
+static void connectToInternet();
+static void readIncidentLight();
+static void readTemperatureAndHumidity();
+static void printDateTime(const RtcDateTime& dateTime);
+static void performPrintDateTime();
+static void scan_worker_fn(async_context_t* context, async_at_time_worker_t* worker);
+static const char* readStringUntilNewLine();
 
-DHT_Unified dht(PIN_DHT11_DATA, DHT11);
-ThreeWire myWire(PIN_RTC_DAT, PIN_RTC_CLK, PIN_RTC_RST); // IO, SCLK, CE
-RtcDS1302 RTC(myWire);
+static DHT_Unified dht(PIN_DHT11_DATA, DHT11);
+static ThreeWire myWire(PIN_RTC_DAT, PIN_RTC_CLK, PIN_RTC_RST); // IO, SCLK, CE
+static RtcDS1302 RTC(myWire);
 
 int main() {
   uint32_t delayMS = 0;
@@ -73,7 +73,7 @@ int main() {
 
   RTC.Begin();
 
-  auto compiled = RtcDateTime(__DATE__, __TIME__);
+  const auto compiled = RtcDateTime(__DATE__, __TIME__);
   printDateTime(compiled);
   printf("\n");
 
@@ -125,7 +125,7 @@ int main() {
   }
 }
 
-int scan_result(void* /*env*/, const cyw43_ev_scan_result_t* result) {
+static int scan_result(void* /*env*/, const cyw43_ev_scan_result_t* result) {
   if (result != nullptr) {
     printf("ssid: %-32s rssi: %4d chan: %3d mac: %02x:%02x:%02x:%02x:%02x:%02x sec: %u\n", result->ssid, result->rssi, result->channel,
            result->bssid[0], result->bssid[1], result->bssid[2], result->bssid[3], result->bssid[4], result->bssid[5], result->auth_mode);
@@ -134,13 +134,14 @@ int scan_result(void* /*env*/, const cyw43_ev_scan_result_t* result) {
 }
 
 // Start a wifi scan
-void scan_worker_fn(async_context_t* /*context*/, async_at_time_worker_t* worker) {
+// NOLINTNEXTLINE(misc-const-correctness)
+static void scan_worker_fn(async_context_t* /*context*/, async_at_time_worker_t* worker) {
   cyw43_wifi_scan_options_t scan_options = { .version = 0 };
-  int err = cyw43_wifi_scan(&cyw43_state, &scan_options, nullptr, scan_result);
+  const int err = cyw43_wifi_scan(&cyw43_state, &scan_options, nullptr, scan_result);
   if (err == 0) {
     auto* scan_started = static_cast<bool*>(worker->user_data);
     *scan_started = true;
-    printf("Iniciando o escaneamento em %lu\n", to_ms_since_boot(get_absolute_time()));
+    printf("Iniciando o escaneamento em %u\n", to_ms_since_boot(get_absolute_time()));
   } else {
     printf("Failed to start scan: %d\n", err);
   }
@@ -178,11 +179,11 @@ void connectToInternet() {
 
 const char* readStringUntilNewLine() {
 
-  static char buffer[32];
+  std::array<char, 32> buffer{};
   static uint8_t index = 0;
   const char* string = "";
 
-  int chr = getchar_timeout_us(0);
+  const int chr = getchar_timeout_us(0);
 
   if (chr == PICO_ERROR_TIMEOUT) {
     return string;
@@ -190,9 +191,9 @@ const char* readStringUntilNewLine() {
 
   if (chr == '\r' || chr == '\n') {
 
-    buffer[index] = '\0';
+    buffer.at(index) = '\0';
 
-    string = buffer;
+    string = buffer.data();
 
     index = 0;
     (void)fflush(stdout);
@@ -201,7 +202,7 @@ const char* readStringUntilNewLine() {
   }
 
   if (index < sizeof(buffer) - 1) {
-    buffer[index++] = static_cast<char>(chr);
+    buffer.at(index++) = static_cast<char>(chr);
   }
   return string;
 }
@@ -211,7 +212,7 @@ void printDateTime(const RtcDateTime& dateTime) {
 }
 
 void performPrintDateTime() {
-  RtcDateTime now = RTC.GetDateTime();
+  const RtcDateTime now = RTC.GetDateTime();
 
   printDateTime(now);
   putchar('\n');
@@ -240,7 +241,7 @@ void readTemperatureAndHumidity() {
   }
 }
 
-template <typename T, typename U> U map(T value, T in_min, T in_max, U out_min, U out_max) {
+template <typename T, typename U> static U map(T value, T in_min, T in_max, U out_min, U out_max) {
   return static_cast<U>(((value - in_min) * (out_max - out_min) / (in_max - in_min)) + out_min);
 }
 
@@ -249,7 +250,7 @@ void readIncidentLight() {
   const uint8_t MAX_PERCENT = 100;
 
   adc_select_input(PIN_LDR - ADC_BASE_PIN);
-  uint16_t adcRead = adc_read();
-  uint32_t lux = map(adcRead, OFFSET_VAL, static_cast<uint16_t>(ANALOG_RES - 1), static_cast<uint8_t>(0), MAX_PERCENT);
-  printf("A quantidade de luz no ambiente é: %lu lm\n", lux);
+  const uint16_t adcRead = adc_read();
+  const uint32_t lux = map(adcRead, OFFSET_VAL, static_cast<uint16_t>(ANALOG_RES - 1), static_cast<uint8_t>(0), MAX_PERCENT);
+  printf("A quantidade de luz no ambiente é: %u lm\n", lux);
 }
