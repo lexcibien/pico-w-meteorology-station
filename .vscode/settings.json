@@ -7,28 +7,40 @@
     "buildcache",
     "clangtidy",
     "cppcheck",
+    "cppcoreguidelines",
+    "eabi",
     "earlephilhower",
     "fstack",
     "gpio",
+    "llvmlibc",
     "makuna",
+    "netif",
     "NOLINTNEXTLINE",
     "Philhower",
     "rpipicow",
+    "rssi",
     "RSSI",
     "SCLK",
     "TKIP",
     "unflags",
     "UNKN",
+    "vararg",
     "Werror",
     "wifi"
   ],
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+    "editor.formatOnSave": true
+  },
   "editor.codeActionsOnSave": {
     "source.organizeImports": "always"
   },
   "C_Cpp.intelliSenseEngine": "disabled",
   "clangd.enable": true,
-  "sonarlint.pathToCompileCommands": "${workspaceFolder}/build/compile_commands.json",
   "clangd.arguments": [
-    "--query-driver=**/arm-none-eabi-*"
-  ]
+    "--query-driver=**/arm-none-eabi-*",
+    "--clang-tidy",
+    "--background-index-priority=background"
+  ],
+  "sonarlint.pathToCompileCommands": "${workspaceFolder}/build/compile_commands.json"
 }
