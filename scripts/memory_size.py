@@ -67,6 +67,7 @@ def parse_memory_from_ld(path: str) -> Dict[str, int]:
         try:
             if s.lower().startswith("0x"):
                 return int(s, 0)
+                # pylint: disable=broad-exception-caught
         except Exception:
             pass
 
@@ -79,11 +80,13 @@ def parse_memory_from_ld(path: str) -> Dict[str, int]:
         if re.match(r"^[0-9+\-*/().\s]+$", s2):
             try:
                 return int(literal_eval(s2))
+                # pylint: disable=broad-exception-caught
             except Exception:
                 return None
 
         try:
             return int(s)
+            # pylint: disable=broad-exception-caught
         except Exception:
             return None
 
@@ -151,8 +154,11 @@ def parse_size_output(output: str) -> Dict[str, int]:
             total += sum(int(value) for value in match.groups())
         return total
 
-    program_pattern = r"^(?:\.boot2|\.text|\.data|\.rodata|\.text\.align|\.ARM\.exidx)\s+(\d+).*"
-    data_pattern = r"^(?:\.data|\.bss|\.noinit)\s+(\d+).*"
+    # Initialized data occupies flash in the image and RAM while the firmware is
+    # running. Pico SDK metadata is also stored in flash, while the relocated
+    # vector table occupies RAM even though it is emitted as a NOBITS section.
+    program_pattern = r"^(?:\.boot2|\.text|\.data|\.rodata|\.binary_info|\.text\.align|\.ARM\.exidx)\s+(\d+).*"
+    data_pattern = r"^(?:\.ram_vector_table|\.data|\.bss|\.noinit)\s+(\d+).*"
     program_size = _calculate_size(output, program_pattern)
     data_size = _calculate_size(output, data_pattern)
     return {"program_size": program_size, "data_size": data_size}
@@ -186,6 +192,7 @@ def detect_memory_limits(config_path: Optional[str] = None, linker_path: Optiona
         try:
             with open(resolved_config, "r", encoding="utf-8") as fp:
                 board_limits = json.load(fp)
+                # pylint: disable=broad-exception-caught
         except Exception:
             board_limits = None
 
@@ -202,6 +209,7 @@ def detect_memory_limits(config_path: Optional[str] = None, linker_path: Optiona
                                 if isinstance(data, dict) and data.get("upload", {}).get("maximum_size"):
                                     board_limits = data
                                     break
+                                # pylint: disable=broad-exception-caught
                             except Exception:
                                 continue
                 if board_limits:
