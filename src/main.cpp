@@ -1,4 +1,4 @@
-#include "Arduino.h"
+#include <../../ArduinoCore-API/api/Common.h>
 #include <DHT.h>
 #include <DHT_U.h>
 #include <RtcDS1302.h>
@@ -28,14 +28,14 @@ DHT_Unified dht(PIN_DHT11_DATA, DHT11);
 ThreeWire myWire(PIN_RTC_DAT, PIN_RTC_CLK, PIN_RTC_RST); // IO, SCLK, CE
 RtcDS1302<ThreeWire> RTC(myWire);
 
-const char* macToString(const uint8_t mac[6]);
-const char* encToString(uint8_t enc);
-void getNetworkList();
-void connectToInternet();
-void readIncidentLight();
-void readTemperatureAndHumidity();
-void printDateTime(const RtcDateTime& dateTime);
-void performPrintDateTime();
+static const char* macToString(const uint8_t mac[6]);
+static const char* encToString(uint8_t enc);
+static void getNetworkList();
+static void connectToInternet();
+static void readIncidentLight();
+static void readTemperatureAndHumidity();
+static void printDateTime(const RtcDateTime& dateTime);
+static void performPrintDateTime();
 
 uint32_t delayMS;
 
@@ -203,9 +203,9 @@ void readIncidentLight() {
 }
 
 const char* macToString(const uint8_t mac[6]) {
-  char buffer[31];
+  static char buffer[18];
   snprintf(buffer, std::size(buffer), "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  return buffer;
+  return &buffer[0];
 }
 
 const char* encToString(uint8_t enc) {

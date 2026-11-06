@@ -6,6 +6,7 @@
     "BSSID",
     "buildcache",
     "clangtidy",
+    "compiledb",
     "cppcheck",
     "earlephilhower",
     "fstack",
@@ -21,6 +22,10 @@
     "Werror",
     "wifi"
   ],
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+    "editor.formatOnSave": true
+  },
   "editor.codeActionsOnSave": {
     "source.organizeImports": "always"
   },
@@ -28,6 +33,10 @@
   "clangd.enable": true,
   "sonarlint.pathToCompileCommands": "${workspaceFolder}/compile_commands.json",
   "clangd.arguments": [
-    "--query-driver=**/arm-none-eabi-*"
-  ]
+    "--query-driver=**/arm-none-eabi-*",
+    "--clang-tidy",
+    "--background-index-priority=background"
+  ],
+  "cmake.autoDetectSourceDirectory": false,
+  "cmake.configureOnOpen": false
 }
