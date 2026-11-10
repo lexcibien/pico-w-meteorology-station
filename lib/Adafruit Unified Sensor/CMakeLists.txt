@@ -8,6 +8,6 @@ target_include_directories(Adafruit_Unified_Sensor
 )
 
 target_link_libraries(Adafruit_Unified_Sensor
-  PUBLIC
-  pico_stdlib
+  PRIVATE
+  met_compile_options
 )

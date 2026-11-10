@@ -10,6 +10,12 @@ target_include_directories(DHT_Sensor_Library
 
 target_link_libraries(DHT_Sensor_Library
   PUBLIC
-  pico_stdlib
   Adafruit_Unified_Sensor
+  pico_sync
+
+  PRIVATE
+  met_compile_options
+  hardware_clocks
+  hardware_gpio
+  pico_time
 )

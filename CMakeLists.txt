@@ -7,11 +7,7 @@ set(PICO_BOARD pico_w CACHE STRING "Board type")
 # Pull in SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(
-  MET_STATION
-  DESCRIPTION "Projeto de uma estação meteorológica"
-  LANGUAGES C CXX ASM
-)
+project(MET_STATION DESCRIPTION "Projeto de uma estação meteorológica" LANGUAGES C CXX ASM)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
@@ -19,6 +15,7 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 if(PICO_SDK_VERSION_STRING VERSION_LESS "2.3.0")
@@ -28,28 +25,33 @@ endif()
 # Initialize the SDK
 pico_sdk_init()
 
+add_library(met_compile_options INTERFACE)
+
+# Compiler flags for the firmware target
+target_compile_options(met_compile_options INTERFACE
+  -Wall
+  -fstack-usage
+  -ffunction-sections
+  -fdata-sections
+  $<$<COMPILE_LANGUAGE:CXX>:
+    -fno-exceptions
+    -fno-unwind-tables
+    -fno-rtti
+    -fno-use-cxa-atexit
+  >
+)
+
+target_compile_definitions(met_compile_options INTERFACE
+  PICO_CXX_ENABLE_EXCEPTIONS=0
+)
+
 # Project libraries define their own sources, public headers and dependencies.
 add_subdirectory(lib)
 
-# Compiler flags for the firmware target
-set(MET_STATION_COMPILE_OPTIONS
-  -Wall
-  -Wno-unused-function # we have some for the docs that aren't called
-  -fstack-usage
-)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS ${SRC_DIR}/*.c ${SRC_DIR}/*.cpp)
 add_executable(MET_STATION ${SRC_FILES})
-target_include_directories(MET_STATION PRIVATE
-  ${SRC_DIR}
-)
-
-target_compile_options(MET_STATION PRIVATE ${MET_STATION_COMPILE_OPTIONS})
-if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-  target_compile_options(MET_STATION PRIVATE -Wno-maybe-uninitialized)
-endif()
+target_include_directories(MET_STATION PRIVATE ${SRC_DIR})
 
 target_compile_definitions(MET_STATION PRIVATE
   USBD_MANUFACTURER="Japatech Projects"
@@ -58,11 +60,10 @@ target_compile_definitions(MET_STATION PRIVATE
 )
 
 target_link_libraries(MET_STATION PRIVATE
+  met_compile_options
   DHT_Sensor_Library
   RTC
   pico_stdlib
-  tinyusb_device
-  tinyusb_board
   pico_cyw43_arch_lwip_poll
   hardware_adc
 )

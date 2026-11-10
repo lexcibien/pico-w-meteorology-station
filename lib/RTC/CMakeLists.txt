@@ -11,5 +11,9 @@ target_include_directories(RTC
 
 target_link_libraries(RTC
   PUBLIC
-  pico_stdlib
+  hardware_gpio
+  pico_time
+
+  PRIVATE
+  met_compile_options
 )
