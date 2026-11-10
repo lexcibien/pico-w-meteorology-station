@@ -5,10 +5,9 @@ import re
 import shutil
 import subprocess
 from ast import literal_eval
-from typing import Dict, Optional, Tuple
 
 filesystem_size = 0
-EEPROM_reserve = 4 * 1024  # 4 KiB EEPROM
+EEPROM_reserve = 0 * 1024  # 4 KiB EEPROM
 
 
 def convert_size_expression_to_int(expression):
@@ -47,11 +46,11 @@ def find_linker_scripts(search_dirs=None):
     return found
 
 
-def parse_memory_from_ld(path: str) -> Dict[str, int]:
+def parse_memory_from_ld(path: str) -> dict[str, int]:
     with open(path, "r", encoding="utf-8", errors="ignore") as fh:
         text = fh.read()
 
-    mem_block = re.search(r"MEMORY\s*\{(.+?)\}", text, re.S)
+    mem_block = re.search(r"MEMORY\s*\{(.+?)\}", text, re.DOTALL)
     if not mem_block:
         return {}
 
@@ -67,7 +66,6 @@ def parse_memory_from_ld(path: str) -> Dict[str, int]:
         try:
             if s.lower().startswith("0x"):
                 return int(s, 0)
-                # pylint: disable=broad-exception-caught
         except Exception:
             pass
 
@@ -80,13 +78,11 @@ def parse_memory_from_ld(path: str) -> Dict[str, int]:
         if re.match(r"^[0-9+\-*/().\s]+$", s2):
             try:
                 return int(literal_eval(s2))
-                # pylint: disable=broad-exception-caught
             except Exception:
                 return None
 
         try:
             return int(s)
-            # pylint: disable=broad-exception-caught
         except Exception:
             return None
 
@@ -108,7 +104,7 @@ def parse_memory_from_ld(path: str) -> Dict[str, int]:
     return memories
 
 
-def find_board_config_path(board_name: Optional[str] = None, config_path: Optional[str] = None) -> Optional[str]:
+def find_board_config_path(board_name: str | None = None, config_path: str | None = None) -> str | None:
     if config_path:
         path = os.path.abspath(config_path)
         if os.path.exists(path):
@@ -138,7 +134,7 @@ def find_board_config_path(board_name: Optional[str] = None, config_path: Option
     return None
 
 
-def parse_size_output(output: str) -> Dict[str, int]:
+def parse_size_output(output: str) -> dict[str, int]:
     def _calculate_size(output_text: str, pattern: str) -> int:
         if not output_text or not pattern:
             return -1
@@ -164,7 +160,7 @@ def parse_size_output(output: str) -> Dict[str, int]:
     return {"program_size": program_size, "data_size": data_size}
 
 
-def find_elf_file(explicit_path: Optional[str] = None):
+def find_elf_file(explicit_path: str | None = None):
     if explicit_path:
         if os.path.exists(explicit_path):
             return explicit_path
@@ -185,14 +181,13 @@ def find_elf_file(explicit_path: Optional[str] = None):
     return None
 
 
-def detect_memory_limits(config_path: Optional[str] = None, linker_path: Optional[str] = None, board_name: Optional[str] = None) -> Tuple[int, int]:
+def detect_memory_limits(config_path: str | None = None, linker_path: str | None = None, board_name: str | None = None) -> tuple[int, int]:
     board_limits = None
     resolved_config = find_board_config_path(board_name=board_name, config_path=config_path)
     if resolved_config:
         try:
             with open(resolved_config, "r", encoding="utf-8") as fp:
                 board_limits = json.load(fp)
-                # pylint: disable=broad-exception-caught
         except Exception:
             board_limits = None
 
@@ -209,7 +204,6 @@ def detect_memory_limits(config_path: Optional[str] = None, linker_path: Optiona
                                 if isinstance(data, dict) and data.get("upload", {}).get("maximum_size"):
                                     board_limits = data
                                     break
-                                # pylint: disable=broad-exception-caught
                             except Exception:
                                 continue
                 if board_limits:
@@ -258,9 +252,7 @@ def detect_memory_limits(config_path: Optional[str] = None, linker_path: Optiona
     return int(flash), int(ram)
 
 
-def get_memory_usage(
-    elf_path: Optional[str] = None, config_path: Optional[str] = None, linker_path: Optional[str] = None, board_name: Optional[str] = None
-):
+def get_memory_usage(elf_path: str | None = None, config_path: str | None = None, linker_path: str | None = None, board_name: str | None = None):
     size_bin = shutil.which("arm-none-eabi-size") or "arm-none-eabi-size"
     elf_path = find_elf_file(elf_path)
     if not elf_path or not os.path.exists(elf_path):
@@ -282,7 +274,7 @@ def get_memory_usage(
         "program_used": mem_used["program_size"],
         "data_used": mem_used["data_size"],
         "flash_total": program_max_size,
-        "flash_sketch": program_max_size,
+        "flash_sketch": max(program_max_size - filesystem_size - EEPROM_reserve, 0),
         "ram_total": data_max_size,
         "flash_used": mem_used["program_size"],
         "ram_used": mem_used["data_size"],
@@ -293,7 +285,7 @@ def get_memory_usage(
 def _format_available_bytes(value, total):
     percent_raw = float(value) / float(total) if total else 0.0
     blocks_per_progress = 10
-    used_blocks = min(int(round(blocks_per_progress * percent_raw)), blocks_per_progress)
+    used_blocks = min(round(blocks_per_progress * percent_raw), blocks_per_progress)
     progress_bar = "=" * used_blocks
     return f"[{progress_bar:{blocks_per_progress}}] {percent_raw: 6.1%} (used {value:d} bytes from {total:d} bytes)"
 
