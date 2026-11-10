@@ -1,0 +1,14 @@
+words = [
+    "CLK",
+    "DHT",
+    "ETHARP",
+    "LDR",
+    "LWIPOPTS",
+    "MEMP",
+    "NETIF",
+    "REASS",
+    "RTC",
+    "SCLK",
+    "Unitless",
+    "rssi",
+]
