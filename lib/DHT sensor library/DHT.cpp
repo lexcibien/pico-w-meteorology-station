@@ -27,7 +27,6 @@
 
 #include <hardware/clocks.h>
 #include <hardware/gpio.h>
-#include <math.h>
 #include <pico/time.h>
 
 #include <cmath>

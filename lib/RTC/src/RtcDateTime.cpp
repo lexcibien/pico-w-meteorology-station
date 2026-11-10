@@ -25,7 +25,6 @@ License along with Rtc.  If not, see
 -------------------------------------------------------------------------*/
 
 #include "RtcDateTime.h"
-#include <pico/stdlib.h>
 
 const uint8_t c_daysInMonth[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 

@@ -11,7 +11,10 @@ Checks: >-
   -cppcoreguidelines-avoid-magic-numbers,
   -readability-magic-numbers,
   -cppcoreguidelines-pro-type-union-access,
-  -cppcoreguidelines-pro-bounds-array-to-pointer-decay
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cert-dcl51-cpp,
+  -bugprone-reserved-identifier,
+  -cert-dcl37-c,
 
 HeaderFilterRegex: '(^|.*/)(src|lib)/.*'
 ExcludeHeaderFilterRegex: '(^|.*/)\.pio/.*'

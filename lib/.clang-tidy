@@ -6,5 +6,6 @@ Checks: "-altera-struct-pack-align,
   -bugprone-easily-swappable-parameters,
   -fuchsia-default-arguments-declarations,
   -readability-identifier-length,
+  -cert-dcl37-c,
   -hicpp-signed-bitwise"
 ...

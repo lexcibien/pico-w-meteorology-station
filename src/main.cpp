@@ -50,7 +50,7 @@ int main() {
   sleep_ms(10000);
 
   if (cyw43_arch_init() != 0) {
-    printf("failed to initialise\n");
+    printf("failed to initialize\n");
     return 1;
   }
 
@@ -141,7 +141,7 @@ static void scan_worker_fn(async_context_t* /*context*/, async_at_time_worker_t*
   if (err == 0) {
     auto* scan_started = static_cast<bool*>(worker->user_data);
     *scan_started = true;
-    printf("Iniciando o escaneamento em %u\n", to_ms_since_boot(get_absolute_time()));
+    printf("Iniciando o escaneamento em %lu\n", to_ms_since_boot(get_absolute_time()));
   } else {
     printf("Failed to start scan: %d\n", err);
   }
@@ -252,5 +252,5 @@ void readIncidentLight() {
   adc_select_input(PIN_LDR - ADC_BASE_PIN);
   const uint16_t adcRead = adc_read();
   const uint32_t lux = map(adcRead, OFFSET_VAL, static_cast<uint16_t>(ANALOG_RES - 1), static_cast<uint8_t>(0), MAX_PERCENT);
-  printf("A quantidade de luz no ambiente é: %u lm\n", lux);
+  printf("A quantidade de luz no ambiente é: %lu lm\n", lux);
 }

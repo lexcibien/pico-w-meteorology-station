@@ -18,8 +18,8 @@
 #ifndef DHT_H
 #define DHT_H
 
-#include <pico/stdlib.h>
-#include <pico/sync.h>
+#include <pico/critical_section.h>
+#include <cstdint>
 
 /* Uncomment to enable printing out nice debug messages. */
 // #define DHT_DEBUG
@@ -76,7 +76,7 @@ class DHT {
   static float convertFtoC(float);
   float computeHeatIndex(bool isFahrenheit = true);
   static float computeHeatIndex(float temperature, float percentHumidity,
-                         bool isFahrenheit = true);
+                                bool isFahrenheit = true);
   float readHumidity(bool force = false);
   bool read(bool force = false);
 
